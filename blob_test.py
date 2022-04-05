@@ -1,6 +1,5 @@
 import sensor, image, pyb, os, time, math
 
-#thresholds = [(11, 100, -128, 127, -128, 127)]
 thresholds = [(0, 34)]
 
 sensor.reset()
@@ -10,7 +9,6 @@ sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must be turned off for color tracking
 sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
-#sensor.set_auto_exposure(True, exposure_us=10000) # shutter module
 
 extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
 
@@ -19,12 +17,8 @@ sensor.skip_frames(time = 2000) # Give the user time to get ready.
 extra_fb.replace(sensor.snapshot())
 print("Saved background image - Now frame differencing!")
 first = True
-replace_ctr = 10
 
 while(True):
-    replace_ctr -= 1
-    if replace_ctr == 0:
-        extra_fb.replace(sensor.snapshot())
     clock.tick()
     img = sensor.snapshot()
     img.difference(extra_fb)
@@ -37,13 +31,11 @@ while(True):
         blob = img.find_blobs(thresholds, roi=(50,40,214,162), pixels_threshold=150)[0]
         img.draw_rectangle(blob.rect())
         img.draw_cross(blob.cx(), blob.cy())
-        # These values depend on the blob not being circular - otherwise they will be shaky.
         print("Coordinates of blob: x:", blob.x(), " y: ", blob.y(), " w: ", blob.w(), " h: ", blob.h())
         print("Pixels of blob: ", blob.pixels())
         print("Centroid of blob - x: ", blob.cx(), " y: ", blob.cy())
         print("Perimeter of blob: ", blob.perimeter())
         print("Area of blob: ", blob.area())
-        print("Hist bins of blob - x: ", blob.x_hist_bins(), " y: ", blob.y_hist_bins())
         print("Elipse can be drawn for(x,y,radius_x,radius_y, rotation): ", blob.enclosed_ellipse())
         print("-----------------------------------")
         if not first and blob.cx() - prev_blob_cx >= 6:
