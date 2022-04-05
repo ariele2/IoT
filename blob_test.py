@@ -1,4 +1,5 @@
 import sensor, image, pyb, os, time, math
+from pyb import UART
 
 thresholds = [(0, 34)]
 
@@ -9,6 +10,10 @@ sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must be turned off for color tracking
 sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
+
+#initialize uart
+uart = UART(3, 9600, timeout_char=1000)
+uart.init(9600, bits=8, parity=None, stop=1, timeout_char=1000)
 
 extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
 
@@ -40,17 +45,10 @@ while(True):
         print("-----------------------------------")
         if not first and blob.cx() - prev_blob_cx >= 6:
             print ("Found an object moving right")
+            uart.write("r")
         elif not first and blob.cx() - prev_blob_cx <= -6:
             print ("Found and object moving left")
-            #if blob.elongation() > 0.5:
-                #img.draw_edges(blob.min_corners(), color=(255,0,0))
-                #img.draw_line(blob.major_axis_line(), color=(0,255,0))
-                #img.draw_line(blob.minor_axis_line(), color=(0,0,255))
-            ## These values are stable all the time.
-            #img.draw_rectangle(blob.rect())
-            #img.draw_cross(blob.cx(), blob.cy())
-            ## Note - the blob rotation is unique to 0-180 only.
-            #img.draw_keypoints([(blob.cx(), blob.cy(), int(math.degrees(blob.rotation())))], size=20)
+            uart.write("l")
         if first:
            first = False
     print(clock.fps())
