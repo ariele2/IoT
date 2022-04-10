@@ -18,10 +18,8 @@ while(True):
     clock.tick()
     msg = "hello" + str(counter)
     counter +=1
-    print("Sending...")
+    print("Sending..." + msg)
     uart.write(msg)
-    sensor.skip_frames(time = 4000)
-    pyb.delay(300)
-    print("Recieveing...")
-    print(uart.read())
+    sensor.skip_frames(time = 1000)
+    pyb.delay(1000)
     print(clock.fps())
