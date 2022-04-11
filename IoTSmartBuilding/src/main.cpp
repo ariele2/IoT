@@ -43,10 +43,11 @@ FirebaseConfig config;
 
 unsigned long sendDataPrevMillis = 0;
 int count = 0, dbg_count = 0;
-bool signupOK = false, sitting = false;
+bool signupOK = false;
 float duration_us, distance_cm;
 std::vector<int> error_vec = {0,0,0,0,0};
-int vec_count = 0;
+int vec_count = 0, dist_avg = 0;
+char* sitting = "NO";
 
 void setup(){
   Serial.begin(9600);
@@ -96,6 +97,7 @@ void loop(){
   duration_us = pulseIn(ECHO_PIN, HIGH);
   // calculate the distance
   distance_cm = 0.017 * duration_us;
+  dist_avg += distance_cm;
   dbg_count++;
   if (distance_cm < 90) {
     count++;
@@ -108,11 +110,7 @@ void loop(){
     // Write an Int number on the database path test/int
     error_vec[vec_count] = count;
     vec_count++;
-    Serial.print("vec_count = ");
-    Serial.println(vec_count);
     vec_count = vec_count % ERROR_VEC_LEN;
-    Serial.print("vec_count after module = ");
-    Serial.println(vec_count);
     int sitting_counter = 0;
     for (int i=0; i<ERROR_VEC_LEN; i++) {
       if (error_vec[i] > 0) {
@@ -123,27 +121,34 @@ void loop(){
       }
     }
     // last 2 elements were positive or in the last 6 there is a major of positive - someone is sitting
-    if ((count > 0 && error_vec[(vec_count-1)%ERROR_VEC_LEN] >= 0) || (count < 0 && sitting_counter - 1 >= 0)) {
-      sitting = true;
+    if ((count > 0 && error_vec[(vec_count-1)%ERROR_VEC_LEN] > 0) || (count < 0 && sitting_counter - 1 >= 0)) {
+      sitting = "YES";
     }
     else {
-      sitting = false;
+      sitting = "NO";
     }
-    if (Firebase.RTDB.setInt(&fbdo, "test/sitting", sitting)){
-      Serial.print("count: ");
-      Serial.println(count);
-      Serial.print("error_vec_counter: ");
-      Serial.println(sitting_counter);
-      Serial.print("dbg_count: ");
-      Serial.println(dbg_count);
+    if (dist_avg/dbg_count < 5.5) {
+      sitting = "ERROR";
+    }
+    if (Firebase.RTDB.setString(&fbdo, "test/sitting", std::string(sitting))){
+      // Serial.print("count: ");
+      // Serial.println(count);
+      // Serial.print("error_vec_counter: ");
+      // Serial.println(sitting_counter);
+      // Serial.print("dist_avg: ");
+      // Serial.println(dist_avg);
+      // Serial.print("dbg_count: ");
+      // Serial.println(dbg_count);
+      Serial.print("value: ");
+      Serial.println(sitting);
       Serial.println("PATH: " + fbdo.dataPath());
-      Serial.println("TYPE: " + fbdo.dataType());
     }
     else {
       Serial.println("FAILED");
       Serial.println("REASON: " + fbdo.errorReason());
     }
     count = 0;
+    dist_avg = 0;
     dbg_count = 0;
   }
 }
