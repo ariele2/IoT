@@ -22,6 +22,7 @@ sensor.skip_frames(time = 2000) # Give the user time to get ready.
 extra_fb.replace(sensor.snapshot())
 print("Saved background image - Now frame differencing!")
 first = True
+counter = 0
 
 while(True):
     clock.tick()
@@ -30,26 +31,31 @@ while(True):
     if not first:
         prev_blob_cx = blob.cx()
         print ("prev_blob_cx: ", prev_blob_cx)
-    sensor.skip_frames(time = 2000)
-    blobs = img.find_blobs(thresholds, roi=(50,40,214,162), pixels_threshold=200)
+    sensor.skip_frames(time = 600)
+    blobs = img.find_blobs(thresholds, roi=(206,10,50,126), pixels_threshold=200)
     if blobs:
-        blob = img.find_blobs(thresholds, roi=(50,40,214,162), pixels_threshold=150)[0]
+        blob = img.find_blobs(thresholds, roi=(206,10,50,126), pixels_threshold=150)[0]
         img.draw_rectangle(blob.rect())
         img.draw_cross(blob.cx(), blob.cy())
-        print("Coordinates of blob: x:", blob.x(), " y: ", blob.y(), " w: ", blob.w(), " h: ", blob.h())
-        print("Pixels of blob: ", blob.pixels())
-        print("Centroid of blob - x: ", blob.cx(), " y: ", blob.cy())
-        print("Perimeter of blob: ", blob.perimeter())
-        print("Area of blob: ", blob.area())
-        print("Elipse can be drawn for(x,y,radius_x,radius_y, rotation): ", blob.enclosed_ellipse())
-        print("-----------------------------------")
+        #print("Coordinates of blob: x:", blob.x(), " y: ", blob.y(), " w: ", blob.w(), " h: ", blob.h())
+        #print("Pixels of blob: ", blob.pixels())
+        #print("Centroid of blob - x: ", blob.cx(), " y: ", blob.cy())
+        #print("Perimeter of blob: ", blob.perimeter())
+        #print("Area of blob: ", blob.area())
+        #print("Elipse can be drawn for(x,y,radius_x,radius_y, rotation): ", blob.enclosed_ellipse())
+        #print("-----------------------------------")
         if not first and blob.cx() - prev_blob_cx >= 6:
-            print ("Found an object moving right")
-            uart.write("r")
+            print("----------------------------------")
+            print ("Found an object moving out")
+            counter -= 1
+            #uart.write("r")
         elif not first and blob.cx() - prev_blob_cx <= -6:
-            print ("Found and object moving left")
-            uart.write("l")
+            print("----------------------------------")
+            print ("Found and object moving in")
+            counter += 1
+            #uart.write("l")
         if first:
            first = False
+    print("Currently inside: ", counter)
     print(clock.fps())
     print("==============================")
