@@ -24,7 +24,8 @@ def home():
 @app.route("/updateDB")
 def start_db():
     res = updateDB()
-    return render_template("index.html", val=res)
+    return redirect(url_for("home"))
+    # return render_template("index.html", val=res)
 
 if __name__ == "__main__":
     app.run()
