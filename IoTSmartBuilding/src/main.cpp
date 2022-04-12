@@ -1,19 +1,6 @@
-/*
-  Rui Santos
-  Complete project details at our blog.
-    - ESP32: https://RandomNerdTutorials.com/esp32-firebase-realtime-database/
-    - ESP8266: https://RandomNerdTutorials.com/esp8266-nodemcu-firebase-realtime-database/
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files.
-  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-  Based in the RTDB Basic Example by Firebase-ESP-Client library by mobizt
-  https://github.com/mobizt/Firebase-ESP-Client/blob/main/examples/RTDB/Basic/Basic.ino
-*/
-
 #include <vector>
 #include <Arduino.h>
-#if defined(ESP32)
-  #include <WiFi.h>
-#endif
+#include <WiFi.h>
 #include <Firebase_ESP_Client.h>
 
 //Provide the token generation process info.
@@ -33,20 +20,21 @@
 
 #define TRIG_PIN 23 // ESP32 pin GIOP23 connected to Ultrasonic Sensor's TRIG pin
 #define ECHO_PIN 22 // ESP32 pin GIOP22 connected to Ultrasonic Sensor's ECHO pin
-#define ERROR_VEC_LEN 5
+#define ERROR_VEC_LEN 5 // error vec holds the last sitting events (yes/no/error)
+#define SITTING_DISTANCE 90 // the distance in cm in which we determine if someone is sitting
+#define FIREBASE_TIME_INTERVAL 6000 // time interval to send data for the firebase in ms
 
 //Define Firebase Data object
 FirebaseData fbdo;
-
 FirebaseAuth auth;
 FirebaseConfig config;
 
 unsigned long sendDataPrevMillis = 0;
-int count = 0, dbg_count = 0;
+int count = 0, total_count = 0;
 bool signupOK = false;
 float duration_us, distance_cm;
 std::vector<int> error_vec = {0,0,0,0,0};
-int vec_count = 0, dist_avg = 0;
+int vec_count = 0, total_avg = 0;
 char* sitting = "NO";
 
 void setup(){
@@ -57,7 +45,7 @@ void setup(){
   pinMode(ECHO_PIN, INPUT);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
-  while (WiFi.status() != WL_CONNECTED){
+  while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
     Serial.print(".");
     delay(300);
   }
@@ -73,11 +61,11 @@ void setup(){
   config.database_url = DATABASE_URL;
 
   /* Sign up */
-  if (Firebase.signUp(&config, &auth, "", "")){
+  if (Firebase.signUp(&config, &auth, "", "")){ //sign up to the database (can add credentials if needed)
     Serial.println("ok");
     signupOK = true;
   }
-  else{
+  else{ 
     Serial.printf("%s\n", config.signer.signupError.message.c_str());
   }
 
@@ -89,7 +77,7 @@ void setup(){
 }
 
 void loop(){
-  // generate 10-microsecond pulse to TRIG pin
+  // generate 10-microsecond pulse to TRIG pin (sonar)
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
@@ -97,22 +85,23 @@ void loop(){
   duration_us = pulseIn(ECHO_PIN, HIGH);
   // calculate the distance
   distance_cm = 0.017 * duration_us;
-  dist_avg += distance_cm;
-  dbg_count++;
-  if (distance_cm < 90) {
+  total_avg += distance_cm; // calculate the total distance so we can measure error with the sonar.
+  total_count++;  
+  if (distance_cm < SITTING_DISTANCE) { // increment count if we see someone sitting currently, otherwise decrement
     count++;
   }
   else {
     count--;
   }
-  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 6000 || sendDataPrevMillis == 0)){
+  // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
+  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
-    // Write an Int number on the database path test/int
+    // update the error_vector
     error_vec[vec_count] = count;
     vec_count++;
-    vec_count = vec_count % ERROR_VEC_LEN;
+    vec_count = vec_count % ERROR_VEC_LEN;  // make sure it is updated regularly withing the length range
     int sitting_counter = 0;
-    for (int i=0; i<ERROR_VEC_LEN; i++) {
+    for (int i=0; i<ERROR_VEC_LEN; i++) { // calculate the number of times someone was sitting in the last elements in the vector
       if (error_vec[i] > 0) {
         sitting_counter++;
       }
@@ -127,18 +116,18 @@ void loop(){
     else {
       sitting = "NO";
     }
-    if (dist_avg/dbg_count < 5.5) {
+    if (total_avg/total_count < 5.5) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
       sitting = "ERROR";
     }
-    if (Firebase.RTDB.setString(&fbdo, "test/sitting", std::string(sitting))){
+    if (Firebase.RTDB.setString(&fbdo, "test/sitting", std::string(sitting))){  // updates the firebase
       // Serial.print("count: ");
       // Serial.println(count);
       // Serial.print("error_vec_counter: ");
       // Serial.println(sitting_counter);
-      // Serial.print("dist_avg: ");
-      // Serial.println(dist_avg);
-      // Serial.print("dbg_count: ");
-      // Serial.println(dbg_count);
+      // Serial.print("total_avg: ");
+      // Serial.println(total_avg);
+      // Serial.print("total_count: ");
+      // Serial.println(total_count);
       Serial.print("value: ");
       Serial.println(sitting);
       Serial.println("PATH: " + fbdo.dataPath());
@@ -148,7 +137,7 @@ void loop(){
       Serial.println("REASON: " + fbdo.errorReason());
     }
     count = 0;
-    dist_avg = 0;
-    dbg_count = 0;
+    total_avg = 0;
+    total_count = 0;
   }
 }
