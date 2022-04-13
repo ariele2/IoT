@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <h1>Smart Building</h1>
+    </div>
+    <div class="container buttonsArea">
+        <div class="row">
+            {% if val == 'stop' %}
+            <div class="col-sm-4">
+                <a href="/updateDB" type="button" class="btn btn-primary btn-lg">Start</a>
+            </div>
+            <div class="col-sm-8">
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <svg class="bi flex-shrink-0 me-2" width="26" height="26" role="img" aria-label="Danger:"><use xlink:href="#exclamation-triangle-fill"/></svg>
+                    <div class="alert-text">
+                      Not Recording
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-sm-4">
+                <a href="/updateDB" type="button" class="btn btn-danger btn-lg">Stop</a>
+            </div>
+            <div class="col-sm-8">
+                <div class="alert alert-success d-flex align-items-center" role="alert">
+                    <svg class="bi flex-shrink-0 me-2" width="26" height="26" role="img" aria-label="Success:"><use xlink:href="#check-circle-fill"/></svg>
+                    <div class="alert-text">
+                      Recording
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="row mt-2">
+            <div class="col-sm-4">
+                <a href="/" type="button" class="btn btn-dark btn-lg">Generate CSV</a>
+            </div>
+            <div class='col-sm-8'>
+                <input type="text" name="daterange" class="form-control dataRangePicker">
+                <script type="text/javascript">
+                    $(function() {
+                        $('input[name="daterange"]').daterangepicker({
+                            timePicker: true,
+                            timePickerIncrement: 30,
+                            locale: {
+                                format: 'MM/DD/YYYY h:mm A'
+                            }
+                        });
+                    });
+                </script>
+             </div>
+        </div>
+    </div>
+{% endblock %}
