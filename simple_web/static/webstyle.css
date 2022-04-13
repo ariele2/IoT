@@ -3,7 +3,7 @@
 }
 
 h1 {
-    margin-top: 10% !important;
+    margin-top: 5% !important;
     font-size: 45px !important;
     font-weight: 700 !important;
 }
@@ -17,7 +17,7 @@ h1 {
     height: 100%;
     padding-top: 7%;
     padding-bottom: 7%;
-    margin-top: 10%;
+    margin-top: 5%;
 }
 
 .form-control {
@@ -25,4 +25,13 @@ h1 {
     height: 60px !important;
     font-size: 18px !important;
     text-align: center;
+}
+
+.alert {
+    width: 75% !important;
+}
+
+.alert-text {
+    padding-left: 30%;
+    font-size: 22px;
 }
