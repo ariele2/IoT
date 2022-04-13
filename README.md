@@ -20,4 +20,7 @@
    c. The sensors will report to an ESP32 board that will uplaod the data to a realtime-firebase database.
    
 3. Volume detector with Raspberry Pie + YOLO
+
    a. 
+   
+4. A simple webapp to start/stop recording and generate .csv files between selected time range. 
