@@ -35,3 +35,8 @@ h1 {
     padding-left: 30%;
     font-size: 22px;
 }
+
+.actionBtn {
+    padding-left: 81px !important;
+    padding-right: 81px !important;
+}
