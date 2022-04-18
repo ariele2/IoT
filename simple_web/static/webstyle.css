@@ -21,7 +21,7 @@ h1 {
 }
 
 .form-control {
-    width: 75% !important;
+    width: 85% !important;
     height: 60px !important;
     font-size: 18px !important;
     text-align: center;
@@ -39,4 +39,17 @@ h1 {
 .actionBtn {
     padding-left: 81px !important;
     padding-right: 81px !important;
+}
+
+span {
+    font-size: 25px;
+    font-weight: bold;
+    position: relative;
+    top: 60%;
+    right: 72%;
+}
+
+.endPicker {
+    position: relative;
+    right: 18%;
 }
