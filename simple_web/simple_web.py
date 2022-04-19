@@ -16,6 +16,7 @@ storage_path = 'iotprojdb.appspot.com'
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path, 'storageBucket': storage_path})
 
+csv_path = "csv_outs/"
 ref = db.reference("/test/action")
 bucket = storage.bucket()
 # blob = bucket.blob(fileName)
@@ -36,6 +37,13 @@ def updateDB():
 
 def generateCSV(start_date, end_date):
     # create the columns titles
+    columns_titles = ["sensorID", "callID", "time", "value"]
+    df = pd.DataFrame(columns=columns_titles)
+    # transfer date value to readable integers
+    # validate the dates
+    # df.to_csv(csv_path + "out.csv") # change to have dates within the file name
+    # print("start date: ", start_date)
+    # print("end date: ", end_date)
     pass
     # query the firebase on the given dates
     # store all of the data in a pandas table to generate a .csv file 
