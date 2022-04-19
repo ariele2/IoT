@@ -42,14 +42,24 @@ h1 {
 }
 
 span {
-    font-size: 25px;
+    font-size: 40px;
     font-weight: bold;
     position: relative;
     top: 60%;
-    right: 72%;
+    right: 69%;
 }
 
 .endPicker {
     position: relative;
-    right: 18%;
+    right: 17%;
+}
+
+.startPicker {
+    position: relative;
+    right: 1%;
+}
+
+.generateBtn {
+    position: relative;
+    right: 1.5%;
 }
