@@ -49,5 +49,22 @@
                 </div>
             </form>
         </div>
+        {% if res %}
+        <div class="row mt-2">
+            <div class="col-sm-4">
+            </div>
+            <div class="col-sm-8">
+                {% if res != 'Please enter a valid date range' %}
+                <a href={{res}} class="btn btn-primary downloadBtn"> Download </a>
+                {% else %}
+                <div class="alert alert-danger d-flex align-items-center error" role="alert">
+                    <div class="alert-text">
+                      {{res}}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}
