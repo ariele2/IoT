@@ -1,5 +1,5 @@
 .btn {
-    font-size: 30px !important;
+    font-size: 200% !important;
 }
 
 h1 {
@@ -16,20 +16,20 @@ h1 {
 .buttonsArea {
     border: 1px solid black;
     height: 100%;
-    padding-top: 7%;
-    padding-bottom: 7%;
+    padding-bottom: 3%;
     margin-top: 5%;
 }
 
 .form-control {
-    width: 85% !important;
-    height: 60px !important;
+    width: 100% !important;
+    height: 100% !important;
     font-size: 18px !important;
+    padding: 5% 5% !important; 
     text-align: center;
 }
 
 .alert {
-    width: 75% !important;
+    width: 100% !important;
 }
 
 .alert-text {
@@ -38,8 +38,8 @@ h1 {
 }
 
 .actionBtn {
-    padding-left: 81px !important;
-    padding-right: 81px !important;
+    padding-left: 20% !important;
+    padding-right: 20% !important;
 }
 
 span {
@@ -47,7 +47,11 @@ span {
     font-weight: bold;
     position: relative;
     top: 60%;
-    right: 69%;
+    right: 35%;
+}
+
+.col-xs-12, .col-xs-5, .col-xs-2 {
+    margin-top: 5% !important;
 }
 
 .endPicker {
@@ -68,12 +72,11 @@ span {
 .downloadBtn {
     text-align: center;
     position: relative;
-    top: 20%;
-    right: 12.5%;
+    margin-top: -7%;
 }
 
 .error {
     text-align: center;
     position: relative;
-    top: 20%;
+    margin-top: -7%;
 }

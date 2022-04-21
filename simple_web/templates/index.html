@@ -7,10 +7,10 @@
     <div class="container buttonsArea">
         <div class="row">
             {% if val == 'stop' %}
-            <div class="col-sm-4">
+            <div class="col-xs-12 col-md-4">
                 <a href="/updateDB" type="button" class="btn btn-primary btn-lg actionBtn">ON</a>
             </div>
-            <div class="col-sm-8">
+            <div class="col-xs-12 col-md-7">
                 <div class="alert alert-danger d-flex align-items-center" role="alert">
                     <svg class="bi flex-shrink-0 me-2" width="26" height="26" role="img" aria-label="Danger:"><use xlink:href="#exclamation-triangle-fill"/></svg>
                     <div class="alert-text">
@@ -19,10 +19,10 @@
                 </div>
             </div>
             {% else %}
-            <div class="col-sm-4">
+            <div class="col-xs-12 col-md-4">
                 <a href="/updateDB" type="button" class="btn btn-danger btn-lg actionBtn">OFF</a>
             </div>
-            <div class="col-sm-8">
+            <div class="col-xs-12 col-md-7">
                 <div class="alert alert-success d-flex align-items-center" role="alert">
                     <svg class="bi flex-shrink-0 me-2" width="26" height="26" role="img" aria-label="Success:"><use xlink:href="#check-circle-fill"/></svg>
                     <div class="alert-text">
@@ -35,25 +35,25 @@
         <div class="row mt-2">
             <form action="" method='POST' name="myform">
                 {{ form.csrt_token }}
-                <div class="col-sm-4">
+                <div class="col-xs-12 col-md-4">
                     {{form.submit(class_="btn btn-dark btn-lg generateBtn")}}
                 </div>
-                <div class='col-sm-3'>
+                <div class='col-xs-5 col-md-3'>
                     {{form.startdate(class_='datepicker form-control startPicker')}} {{form.hidden_tag()}}
                 </div>
-                <div class='col-sm-1'>
+                <div class='col-xs-2 col-md-1'>
                     <span> - </span> 
                 </div>
-                <div class='col-sm-3'>
+                <div class='col-xs-5 col-md-3'>
                     {{form.enddate(class_='datepicker form-control endPicker')}} {{form.hidden_tag()}}
                 </div>
             </form>
         </div>
         {% if res %}
         <div class="row mt-2">
-            <div class="col-sm-4">
+            <div class="col-xs-4 col-md-4">
             </div>
-            <div class="col-sm-8">
+            <div class="col-xs-12 col-md-7">
                 {% if res != 'Please enter a valid date range' %}
                 <a href={{res}} class="btn btn-primary downloadBtn"> Download </a>
                 {% else %}
