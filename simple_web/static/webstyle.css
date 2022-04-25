@@ -3,11 +3,19 @@
 }
 
 h1 {
-    margin-top: 5% !important;
     font-size: 45px !important;
     font-weight: 700 !important;
 }
 
+.navbar-toggler-icon {
+    font-size: 100%;
+    text-align: center !important;
+}
+
+.table td, .table th {
+    font-size: 130%;
+    text-align: center;
+}
 
 .center {
     text-align: center;
@@ -42,7 +50,7 @@ h1 {
     padding-right: 20% !important;
 }
 
-span {
+#dateSeperator {
     font-size: 40px;
     font-weight: bold;
     position: relative;
@@ -51,7 +59,7 @@ span {
 }
 
 .col-xs-12, .col-xs-5, .col-xs-2 {
-    margin-top: 5% !important;
+    margin-top: 3% !important;
 }
 
 .endPicker {
@@ -72,11 +80,11 @@ span {
 .downloadBtn {
     text-align: center;
     position: relative;
-    margin-top: -7%;
+    margin-top: -5%;
 }
 
 .error {
     text-align: center;
     position: relative;
-    margin-top: -7%;
+    margin-top: -5%;
 }

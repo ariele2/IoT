@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="row">
+    <div class="row mt-3 mb-5">
         <h1>Smart Building</h1>
     </div>
     <div class="container buttonsArea">
@@ -42,7 +42,7 @@
                     {{form.startdate(class_='datepicker form-control startPicker')}} {{form.hidden_tag()}}
                 </div>
                 <div class='col-xs-2 col-md-1'>
-                    <span> - </span> 
+                    <span id="dateSeperator"> - </span> 
                 </div>
                 <div class='col-xs-5 col-md-3'>
                     {{form.enddate(class_='datepicker form-control endPicker')}} {{form.hidden_tag()}}

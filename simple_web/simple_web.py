@@ -121,6 +121,10 @@ def generate_csv():
         session['res'] = res
         return redirect(url_for("home", res=res))
 
+@app.route("/status")
+def getStatus():
+    # add the query on the database for the status
+    return render_template("status.html")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=1234)
