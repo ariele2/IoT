@@ -29,10 +29,10 @@ labelsPath = os.path.sep.join([args["yolo"], "coco.names"])
 LABELS = open(labelsPath).read().strip().split("\n")
 # initialize a list of colors to represent each possible class label
 np.random.seed(42)
-# COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),
-	# dtype="uint8")
+COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),
+	dtype="uint8")
 
-# print("[DEBUG]: COLORS = ", COLORS)
+print("[DEBUG]: COLORS = ", COLORS)
 
 # derive the paths to the YOLO weights and model configuration
 weightsPath = os.path.sep.join([args["yolo"], "yolov3.weights"])
@@ -113,22 +113,22 @@ while(True):
 			args["threshold"])
 
 		
-		# # ensure at least one detection exists
-		# if len(idxs) > 0:
-		# 	# loop over the indexes we are keeping
-		# 	print("[DEBUG] len(idxs) = ", len(idxs))
-		# 	print("[DEBUG] ClassIDs = ", classIDs)
-		# 	for i in idxs.flatten():
-		# 		# extract the bounding box coordinates
-		# 		(x, y) = (boxes[i][0], boxes[i][1])
-		# 		(w, h) = (boxes[i][2], boxes[i][3])
-		# 		# draw a bounding box rectangle and label on the image
-		# 		print("[DEBUG] ClassID = ", classID)
-		# 		color = [int(c) for c in COLORS[classIDs[i]]]
-		# 		cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-		# 		text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
-		# 		cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
-		# 			0.5, color, 2)
+		# ensure at least one detection exists
+		if len(idxs) > 0:
+			# loop over the indexes we are keeping
+			print("[DEBUG] len(idxs) = ", len(idxs))
+			print("[DEBUG] ClassIDs = ", classIDs)
+			for i in idxs.flatten():
+				# extract the bounding box coordinates
+				(x, y) = (boxes[i][0], boxes[i][1])
+				(w, h) = (boxes[i][2], boxes[i][3])
+				# draw a bounding box rectangle and label on the image
+				print("[DEBUG] ClassID = ", classID)
+				color = [int(c) for c in COLORS[classIDs[i]]]
+				cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+				text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+				cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
+					0.5, color, 2)
 		prev_time = curr_time
 		# show the output image
 		print("Found ", len(idxs), "People")
