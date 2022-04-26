@@ -55,7 +55,7 @@ while(True):
 	curr_time = time.time()
 	# res, image = cam.read()
 	# cv2.imshow("Image", image)
-	if curr_time - prev_time > 30:
+	if curr_time - prev_time > 20:
 		res, image = cam.read()
 		if not res:	#didn't capture an image
 			print("There is an error with the camera - couldn't capture images")
@@ -138,7 +138,8 @@ while(True):
 		prev_time = curr_time
 		# show the output image
 		print("Found ", len(idxs), "People")
-		cv2.imshow("Image", image)
+		cv2.imshow("Image"+str(curr_time), image)
 		cv2.waitKey(5000)
+		cv2.destroyAllWindows()
 
 cam.release()
