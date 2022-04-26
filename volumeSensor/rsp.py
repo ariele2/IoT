@@ -43,6 +43,11 @@ net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
 # initialize camera
 cam = cv2.VideoCapture(0)
+fps = cap.get(cv2.CAP_PROP_FPS) 
+frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+frame_number = 0
+cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+print("[DEBUG] FPS = ", fps, ", frame_count = ", frame_count)
 (W,H) = (None, None)
 prev_time = 0
 # make a while loop that works every 30 secs
@@ -58,7 +63,6 @@ while(True):
 		# load our input image and grab its spatial dimensions
 		if W is None or H is None:
 			(H, W) = image.shape[:2]
-		cv2.imwrite("images/im_" + str(curr_time) + ".png", image)
 
 		# determine only the *output* layer names that we need from YOLO
 		ln = net.getLayerNames()
