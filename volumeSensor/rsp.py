@@ -58,6 +58,7 @@ while(True):
 		# load our input image and grab its spatial dimensions
 		if W is None or H is None:
 			(H, W) = image.shape[:2]
+		print("in")
 		cv2.imshow("Image", image)
 
 		# determine only the *output* layer names that we need from YOLO
