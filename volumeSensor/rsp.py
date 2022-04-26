@@ -40,7 +40,7 @@ print("[INFO] loading YOLO from disk...")
 net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
 # initialize camera
-cam=cv2.VideoCapture(0)
+cam = cv2.VideoCapture(0)
 prev_time = 0
 # make a while loop that works every 30 secs
 while(True):
@@ -50,9 +50,10 @@ while(True):
 		print("There is an error with the camera - couldn't capture images")
 		break
 	if curr_time - prev_time > 30:
-		cv2.imshow("Frame", image)
+		cv2.imshow("Image", image)
 		# load our input image and grab its spatial dimensions
-		(H, W) = image.shape[:2]
+		if W is None or H is None:
+			(H, W) = frame.shape[:2]
 		# determine only the *output* layer names that we need from YOLO
 		ln = net.getLayerNames()
 		ln = [ln[i - 1] for i in net.getUnconnectedOutLayers()]
