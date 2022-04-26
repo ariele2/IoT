@@ -135,4 +135,3 @@ while(True):
 	cv2.waitKey(30000)
 
 cam.release()
-cam.destroyAllWindows()
