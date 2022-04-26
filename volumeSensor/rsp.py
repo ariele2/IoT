@@ -43,10 +43,10 @@ net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
 # initialize camera
 cam = cv2.VideoCapture(0)
-fps = cap.get(cv2.CAP_PROP_FPS) 
-frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+fps = cam.get(cv2.CAP_PROP_FPS) 
+frame_count = cam.get(cv2.CAP_PROP_FRAME_COUNT)
 frame_number = 0
-cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+cam.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
 print("[DEBUG] FPS = ", fps, ", frame_count = ", frame_count)
 (W,H) = (None, None)
 prev_time = 0
