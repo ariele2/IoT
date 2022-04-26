@@ -49,6 +49,7 @@ while(True):
 	if not res:	#didn't capture an image
 		print("There is an error with the camera - couldn't capture images")
 		break
+	cv2.imshow("Image", image)
 	if curr_time - prev_time > 30:
 		# load our input image and grab its spatial dimensions
 		(H, W) = image.shape[:2]
@@ -100,15 +101,17 @@ while(True):
 					boxes.append([x, y, int(width), int(height)])
 					confidences.append(float(confidence))
 					classIDs.append(classID)
-
+		print("[DEBUG] Finished for output in layerOutputs")
 		# apply non-maxima suppression to suppress weak, overlapping bounding
 		# boxes
 		idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"],
 			args["threshold"])
 
+		
 		# ensure at least one detection exists
 		if len(idxs) > 0:
 			# loop over the indexes we are keeping
+			print("[DEBUG] len(idxs) = ", len(idxs))
 			for i in idxs.flatten():
 				# extract the bounding box coordinates
 				(x, y) = (boxes[i][0], boxes[i][1])
