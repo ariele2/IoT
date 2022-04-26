@@ -130,7 +130,8 @@ while(True):
 					text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
 					cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
 						0.5, color, 2)
-					print(confidences[i] if confidences[i]>0.9)
+					if confidences[i] > 0.9:
+						print(confidences[i])
 
 		prev_time = curr_time
 		# show the output image
