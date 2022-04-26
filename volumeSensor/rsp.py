@@ -41,11 +41,11 @@ print("[INFO] loading YOLO from disk...")
 net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
 # initialize camera
-cam = cv2.VideoCapture(0)
-fps = cam.get(cv2.CAP_PROP_FPS) 
-frame_count = cam.get(cv2.CAP_PROP_FRAME_COUNT)
-frame_number = 0
-cam.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+# cam = cv2.VideoCapture(0)
+# fps = cam.get(cv2.CAP_PROP_FPS) 
+# frame_count = cam.get(cv2.CAP_PROP_FRAME_COUNT)
+# frame_number = 0
+# cam.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
 print("[DEBUG] FPS = ", fps, ", frame_count = ", frame_count)
 (W,H) = (None, None)
 prev_time = 0
@@ -55,6 +55,7 @@ while(True):
 	# res, image = cam.read()
 	# cv2.imshow("Image", image)
 	if curr_time - prev_time > 20:
+		cam = cv2.VideoCapture(0)
 		res, image = cam.read()
 		if not res:	#didn't capture an image
 			print("There is an error with the camera - couldn't capture images")
@@ -138,7 +139,6 @@ while(True):
 		# show the output image
 		print("Found ", len(idxs), "People")
 		cv2.imshow("Image"+str(curr_time), image)
-		cv2.waitKey(2000)
+		cv2.waitKey(5000)
 		cv2.destroyAllWindows()
-
-cam.release()
+		cam.release()
