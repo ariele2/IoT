@@ -49,8 +49,8 @@ while(True):
 	if not res:	#didn't capture an image
 		print("There is an error with the camera - couldn't capture images")
 		break
-	cv2.imshow("Image", image)
 	if curr_time - prev_time > 30:
+		cv2.imshow("Frame", image)
 		# load our input image and grab its spatial dimensions
 		(H, W) = image.shape[:2]
 		# determine only the *output* layer names that we need from YOLO
