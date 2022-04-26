@@ -114,6 +114,7 @@ while(True):
 
 		
 		# ensure at least one detection exists
+		cv2.imshow("Image" + str(curr_time), image)
 		if len(idxs) > 0:
 			# loop over the indexes we are keeping
 			print("[DEBUG] len(idxs) = ", len(idxs))
@@ -132,7 +133,6 @@ while(True):
 		prev_time = curr_time
 		# show the output image
 		print("Found ", len(idxs), "People")
-		cv2.imshow("Image"+str(curr_time), image)
 		cv2.waitKey(5000)
 		cv2.destroyAllWindows()
 		cam.release()
