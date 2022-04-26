@@ -48,6 +48,7 @@ prev_time = 0
 # make a while loop that works every 30 secs
 while(True):
 	curr_time = time.time()
+	cv2.imshow("Image", image)
 	if curr_time - prev_time > 30:
 		res, image = cam.read()
 		if not res:	#didn't capture an image
@@ -131,6 +132,6 @@ while(True):
 		# show the output image
 		print("Found ", len(idxs), "People")
 		cv2.imshow("Image", image)
-		cv2.waitKey(5000)
+		cv2.waitKey(1)
 
 cam.release()
