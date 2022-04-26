@@ -115,11 +115,13 @@ while(True):
 		if len(idxs) > 0:
 			# loop over the indexes we are keeping
 			print("[DEBUG] len(idxs) = ", len(idxs))
+			print("[DEBUG] ClassIDs = ", classIDs)
 			for i in idxs.flatten():
 				# extract the bounding box coordinates
 				(x, y) = (boxes[i][0], boxes[i][1])
 				(w, h) = (boxes[i][2], boxes[i][3])
 				# draw a bounding box rectangle and label on the image
+				print("[DEBUG] ClassID = ", classID)
 				color = [int(c) for c in COLORS[classIDs[i]]]
 				cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
 				text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
