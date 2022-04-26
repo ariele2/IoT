@@ -46,7 +46,7 @@ net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 # frame_count = cam.get(cv2.CAP_PROP_FRAME_COUNT)
 # frame_number = 0
 # cam.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
-print("[DEBUG] FPS = ", fps, ", frame_count = ", frame_count)
+# print("[DEBUG] FPS = ", fps, ", frame_count = ", frame_count)
 (W,H) = (None, None)
 prev_time = 0
 # make a while loop that works every 30 secs
