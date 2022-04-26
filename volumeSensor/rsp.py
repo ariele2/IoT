@@ -124,7 +124,7 @@ while(True):
 				(w, h) = (boxes[i][2], boxes[i][3])
 				# draw a bounding box rectangle and label on the image
 				print("[DEBUG] ClassID = ", classID)
-				if classID[i] <= 2:
+				if classIDs[i] <= 2:
 					color = [int(c) for c in COLORS[classIDs[i]]]
 					cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
 					text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
