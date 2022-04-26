@@ -3,7 +3,9 @@
 1. Can monitor the amount of people in certain room/area (with defined enterences).
 2. Can monitor the amount of people sitting in a retricted zone withing the room/area.
 3. There are 2 GUIs for the app: 
+
       a. A simple web app 
+      
       b. UNITY.
 
 # The project consists of:
