@@ -126,7 +126,7 @@ while(True):
 				print("[DEBUG] ClassID = ", classID)
 				color = [int(c) for c in COLORS[0]]
 				cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-				text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+				text = "{}: {:.4f}".format(LABELS[0], confidences[i])
 				cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
 					0.5, color, 2)
 		prev_time = curr_time
