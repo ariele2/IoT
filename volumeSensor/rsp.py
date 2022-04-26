@@ -130,6 +130,8 @@ while(True):
 					text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
 					cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
 						0.5, color, 2)
+				else:
+					print(confidences[i])
 		prev_time = curr_time
 		# show the output image
 		print("Found ", len(idxs), "People")
