@@ -86,9 +86,11 @@ while(True):
 				scores = detection[5:]
 				classID = np.argmax(scores)
 				confidence = scores[classID]
+				print("[DEBUG] scores = ", scores, ", confidence = ", confidence)
 				# filter out weak predictions by ensuring the detected
 				# probability is greater than the minimum probability
 				if confidence > args["confidence"]:
+					print("[DEBUG] args[confidence] = ", args["confidence"])
 					# scale the bounding box coordinates back relative to the
 					# size of the image, keeping in mind that YOLO actually
 					# returns the center (x, y)-coordinates of the bounding
