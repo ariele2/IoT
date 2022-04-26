@@ -48,6 +48,7 @@ prev_time = 0
 # make a while loop that works every 30 secs
 while(True):
 	curr_time = time.time()
+	res, image = cam.read()
 	cv2.imshow("Image", image)
 	if curr_time - prev_time > 30:
 		res, image = cam.read()
