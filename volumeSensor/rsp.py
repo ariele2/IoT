@@ -138,7 +138,7 @@ while(True):
 		# show the output image
 		print("Found ", len(idxs), "People")
 		cv2.imshow("Image"+str(curr_time), image)
-		cv2.waitKey(1)
+		cv2.waitKey(2000)
 		cv2.destroyAllWindows()
 
 cam.release()
