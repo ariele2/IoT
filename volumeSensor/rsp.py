@@ -41,6 +41,7 @@ net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
 # initialize camera
 cam = cv2.VideoCapture(0)
+(W,H) = (None, None)
 prev_time = 0
 # make a while loop that works every 30 secs
 while(True):
