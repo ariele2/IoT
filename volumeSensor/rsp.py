@@ -124,7 +124,7 @@ while(True):
 				(w, h) = (boxes[i][2], boxes[i][3])
 				# draw a bounding box rectangle and label on the image
 				print("[DEBUG] ClassID = ", classID)
-				color = [int(c) for c in COLORS[classIDs[i]]]
+				color = [int(c) for c in COLORS[0]]
 				cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
 				text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
 				cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
@@ -132,7 +132,7 @@ while(True):
 		prev_time = curr_time
 		# show the output image
 		print("Found ", len(idxs), "People")
-		cv2.imshow("Image"+str(curr_time), image)
-		cv2.waitKey(5000)
+		# cv2.imshow("Image"+str(curr_time), image)
+		# cv2.waitKey(5000)
 		cv2.destroyAllWindows()
 		cam.release()
