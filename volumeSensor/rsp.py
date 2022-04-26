@@ -48,12 +48,11 @@ prev_time = 0
 # make a while loop that works every 30 secs
 while(True):
 	curr_time = time.time()
-	res, image = cam.read()
 	if not res:	#didn't capture an image
 		print("There is an error with the camera - couldn't capture images")
 		break
 	if curr_time - prev_time > 30:
-		cv2.imshow("Image", image)
+		res, image = cam.read()
 		# load our input image and grab its spatial dimensions
 		if W is None or H is None:
 			(H, W) = image.shape[:2]
