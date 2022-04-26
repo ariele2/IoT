@@ -139,6 +139,6 @@ while(True):
 		# show the output image
 		print("Found ", len(idxs), "People")
 		cv2.imshow("Image", image)
-		cv2.waitKey(1)
+		cv2.waitKey(5000)
 
 cam.release()
