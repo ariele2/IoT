@@ -118,6 +118,7 @@ while(True):
 			# loop over the indexes we are keeping
 			print("[DEBUG] len(idxs) = ", len(idxs))
 			print("[DEBUG] ClassIDs = ", classIDs)
+			count_error = 0
 			for i in idxs.flatten():
 				# extract the bounding box coordinates
 				(x, y) = (boxes[i][0], boxes[i][1])
@@ -130,12 +131,14 @@ while(True):
 					text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
 					cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
 						0.5, color, 2)
+
 					if confidences[i] > 0.9:
 						print(confidences[i])
-
+				else:
+					count_error = count_error + 1
 		prev_time = curr_time
 		# show the output image
-		print("Found ", len(idxs), "People")
+		print("Found ", len(idxs) -count_error , "People")
 		cv2.imshow("Image"+str(curr_time), image)
 		cv2.waitKey(5000)
 		cv2.destroyAllWindows()
