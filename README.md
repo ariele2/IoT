@@ -2,7 +2,9 @@
 
 1. Can monitor the amount of people in certain room/area (with defined enterences).
 2. Can monitor the amount of people sitting in a retricted zone withing the room/area.
-3. There is a GUI for the app,  delivered with UNITY.
+3. There are 2 GUIs for the app: 
+      a. A simple web app 
+      b. UNITY.
 
 # The project consists of:
 1. OpenMV camera. 
@@ -23,4 +25,4 @@
 
    a. 
    
-4. A simple webapp to start/stop recording and generate .csv files between selected time range. 
+4. A simple webapp to start/stop recording, generate .csv files between selected time ranges and monitoring the sensors health. 
