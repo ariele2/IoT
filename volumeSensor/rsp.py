@@ -14,7 +14,7 @@ default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_pa
 ref = db.reference("/test/volume")
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--image", required=True,
+ap.add_argument("-i", "--image", required=False,
 	help="path to input image")
 ap.add_argument("-y", "--yolo", required=True,
 	help="base path to YOLO directory")
