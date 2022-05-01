@@ -8,28 +8,32 @@ import cv2
 import os
 import signal
 
-def interrupted(signum, frame):
-    "called when read times out"
-    print ('interrupted!')
-signal.signal(signal.SIGALRM, interrupted)
+def get_input(message, channel):
+    response = input(message)
+    channel.put(response)
 
-def input():
+
+def input_with_timeout(message, timeout):
+    channel = queue.Queue()
+    message = message + " [{} sec timeout] ".format(timeout)
+    thread = threading.Thread(target=get_input, args=(message, channel))
+    # by setting this as a daemon thread, python won't wait for it to complete
+    thread.daemon = True
+    thread.start()
+
     try:
-            print ('You have 5 seconds to type in your stuff...')
-            foo = raw_input()
-            return foo
-    except:
-            # timeout
-            return
+        response = channel.get(True, timeout)
+        return response
+    except queue.Empty:
+        pass
+    return None
 
-# set alarm
-signal.alarm(TIMEOUT)
-s = input()
-# disable the alarm after success
-signal.alarm(0)
-print ('You typed', s)
-if (s == 'exit'):
-	exit (0)
+a = input_with_timeout("for exit enter 'exit':", 5)
+time.sleep(3)
+if a == "exit":
+	print ( "exit file ")
+	exit(0)
+print("Continue")
 
 cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
