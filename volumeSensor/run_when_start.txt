@@ -1,0 +1,5 @@
+on terminal type : sudo nano /etc/profile
+
+And then, in the end of the file , add :sudo python3 /home/ariele/Desktop/iot/IoT/volumeSensor/rsp.py --yolo /home/ariele/Desktop/iot/IoT/volumeSensor/yolo-coco
+
+Alert : AFTER THIS THE RSP WILL BE STUCK IN LOOP FOREVER SO BE ADVIZED! NEED TO ADD TO THE CODE DISABLE OPTION FROM THE START 
