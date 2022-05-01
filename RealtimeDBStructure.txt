@@ -1,27 +1,33 @@
 Realtime DB - Structure Example
 
+Assume we have 2 sensors - 000, 001
+And dat of 1 minute span with 30 seconds interval 
+between each received data.
+
 { 
-  ESP32-1:
-	{
-	 UltraSonic-1.1: { 
-		 25/04/22-12:13: 1
-		 25/04/22-12:14: 0
-  	},
-	UltraSonic-1.2: { 
-		 25/04/22-12:13: 0
-		 25/04/22-12:14: 0
-	}
-  },
-  ESP32-2: 
-	{
-	 UltraSonic-2.1: { 
-		 25/04/22-12:13: 1
-		 25/04/22-12:14: 0
-		},
-	 UltraSonic-2.2: { 
-		 25/04/22-12:13: 1
-		 25/04/22-12:14: 1
-		}
-	}
+  "real_data": { 
+     // format: dd-mm-yy hh:mm:ss <sensorId>
+     "01-05-22 18:53:30 000": {
+        "value": "0"
+     },
+     "01-05-22 18:53:30 001": {
+        "value": "21"
+     }
+  }
+  "data": { 
+     // format: dd-mm-yy hh:mm:ss <sensorId>
+     "01-05-22 18:53:30 000": {
+        "value": "0"
+     },
+     "01-05-22 18:53:30 001": {
+        "value": "21"
+     },
+     "01-05-22 18:53:00 000": {
+        "value": "1"
+     },
+     "01-05-22 18:53:30 001": {
+        "value": "19"
+     }
+  }
 }
 	
