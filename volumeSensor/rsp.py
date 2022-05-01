@@ -6,6 +6,30 @@ import argparse
 import time
 import cv2
 import os
+import signal
+
+def interrupted(signum, frame):
+    "called when read times out"
+    print ('interrupted!')
+signal.signal(signal.SIGALRM, interrupted)
+
+def input():
+    try:
+            print ('You have 5 seconds to type in your stuff...')
+            foo = raw_input()
+            return foo
+    except:
+            # timeout
+            return
+
+# set alarm
+signal.alarm(TIMEOUT)
+s = input()
+# disable the alarm after success
+signal.alarm(0)
+print ('You typed', s)
+if (s == 'exit'):
+	exit (0)
 
 cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
