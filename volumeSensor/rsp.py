@@ -6,7 +6,11 @@ import argparse
 import time
 import cv2
 import os
-import signal
+
+import threading
+import queue
+import time
+
 
 def get_input(message, channel):
     response = input(message)
@@ -28,14 +32,15 @@ def input_with_timeout(message, timeout):
         pass
     return None
 
-a = input_with_timeout("for exit enter 'exit':", 5)
+command = input_with_timeout("Commands:", 5)
 time.sleep(3)
-if a == "exit":
-	print ( "exit file ")
+if( command == 'exit'):
+	print (command)
 	exit(0)
-print("Continue")
+print ("continue program....")
 
-cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
+
+cred_obj = firebase_admin.credentials.Certificate("/home/ariele/Desktop/iot/IoT/volumeSensor/iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path})
 ref = db.reference("/test/volume")
