@@ -37,7 +37,7 @@ time.sleep(3)
 if( command == 'exit'):
 	print (command)
 	exit(0)
-print ("continue program....")
+print (command)
 
 
 cred_obj = firebase_admin.credentials.Certificate("/home/ariele/Desktop/iot/IoT/volumeSensor/iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
