@@ -77,14 +77,12 @@ h1 {
     right: 1.5%;
 }
 
-.downloadBtn {
+.downloadBtn, .error {
     text-align: center;
     position: relative;
-    margin-top: -5%;
+    margin-top: -2%;
 }
 
-.error {
-    text-align: center;
-    position: relative;
-    margin-top: -5%;
+.downloadBtn {
+    right: 3.5%;
 }

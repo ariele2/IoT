@@ -116,9 +116,7 @@ def generateCSV(start_date, end_date):
     # create the csv file
     start_date_str = str(start_date[0]) + '_' + str(start_date[1]) + '_' + str(start_date[2])
     end_date_str = str(end_date[0]) + '_' + str(end_date[1]) + '_' + str(end_date[2])
-    # new_xlsx_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".xlsx"
     new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".csv"
-    # df.to_excel(new_xlsx_filename, index=False) 
     df.to_csv(new_csv_filename, index=False)
     # upload the file to the storage
     blob = bucket.blob(new_csv_filename)
@@ -165,7 +163,11 @@ def generate_csv():
 
 @app.route("/status")
 def getStatus():
-    # add the query on the database for the status
+    # make a dict of all of the sensors (for now hard coded list) as keys, val initialized to 0
+    # query the real_data from the realtime db
+    # each sensor that reported back a request that makes sense (not error), change it's val to 1
+    # pass the list to the return
+    # loop through it in the html with JINGA and update the active sensors
     return render_template("status.html")
 
 if __name__ == "__main__":
