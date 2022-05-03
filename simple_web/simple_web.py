@@ -7,6 +7,7 @@ import firebase_admin
 from firebase_admin import db, credentials, initialize_app, storage
 import pandas as pd
 import datetime
+from io import StringIO
 
 app = Flask(__name__)
 
@@ -18,7 +19,8 @@ firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.ap
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path, 'storageBucket': storage_path})
 
 csv_path = "csv_reports/"
-ref = db.reference("/test/action")
+action_ref = db.reference("/action")
+data_ref = db.reference("/data")
 bucket = storage.bucket()
 
 
@@ -28,12 +30,13 @@ class InfoForm(FlaskForm):
     submit = SubmitField('Generate CSV')
 
 def updateDB():
-    data = ref.get()
-    if data == "stop":
-        ref.set("start")
-        return "start"
-    ref.set("stop")
-    return "stop"
+    action_data = action_ref.get()
+    if action_data == "off":
+        action_ref.set("on")
+        return "on"
+    action_ref.set("off")
+    return "off"
+
 
 def date2num(date):
     list_date = date.split(' ')
@@ -41,6 +44,16 @@ def date2num(date):
     month = datetime.datetime.strptime(list_date[2], "%b").month
     year = int(list_date[3])
     return [day,month,year]
+
+
+def arrangeQueryDate(date):
+    date_strings = date.split("-")
+    date = [int(d) for d in date_strings]
+    date[2] += 2000 # because we save it as 22 we need to add 2000
+    month = date[0]
+    date[0] = date[1]
+    date[1] = month
+    return date
 
 
 def validateDates(start_date, end_date):
@@ -58,13 +71,28 @@ def validateDates(start_date, end_date):
                 return False
             else:   # the same day or greater
                 return True
-
     return False    # shouldn't reach here
+
+
+def inRange(date, start_date, end_date):
+    # print("[DEBUG] date: ", date, ", start_date: ", start_date, ", end_date: ", end_date)
+    if date[2] > end_date[2] or date[2] < start_date[2]:    # data's year is not in the range 
+        return False
+    # same year for start, end and date, so need to check months, otherwise it means there is a legal year differential
+    elif date[2] == end_date[2] and date[2] == start_date[2]:   
+        if date[1] > end_date[1] or date[1] < start_date[1]:
+            return False
+        # same month for start, end and date, so need to check days, otherwise it means there is a legal month differntial.
+        elif date[1] == end_date[1] and date[1] == start_date[1]:  
+            if date[0] > end_date[0] or date[0] < start_date[0]:
+                return False
+    # if reached here, the date we found is good to go inside the .csv file!
+    return True 
 
 
 def generateCSV(start_date, end_date):
     # create the columns titles
-    columns_titles = ["sensorID", "callID", "time", "value"]
+    columns_titles = ["sensorID", "Type", "Event", "Time", "Day"]
     df = pd.DataFrame(columns=columns_titles)
     # transfer date value to readable integers
     start_date = date2num(start_date)
@@ -73,11 +101,23 @@ def generateCSV(start_date, end_date):
     if not validateDates(start_date, end_date):
         return "ERROR"
     # query the dates and arrange in the dataframe
+    data = data_ref.get()
+    if data:
+        for key, val in data.items():
+            key_arr = key.split(" ")
+            date, time, sensor_id = key_arr
+            date = arrangeQueryDate(date)
+            if not inRange(date, start_date, end_date):
+                continue
+            event = val['Value']
+            day = str(date[0]) + '/' + str(date[1]) + '/' + str(date[2])
+            # print("[DEBUG] sensor_id: ", sensor_id, ", event: ", event, "time: ", time, ", day: ", day)
+            df.loc[len(df.index)] = [sensor_id, "-", event, time, day]
     # create the csv file
-    start_date_str = str(start_date[0]) + '.' + str(start_date[1]) + '.' + str(start_date[2])
-    end_date_str = str(end_date[0]) + '.' + str(end_date[1]) + '.' + str(end_date[2])
-    new_csv_filename = csv_path + "report" + start_date_str + "-" + end_date_str + ".csv"
-    df.to_csv(new_csv_filename) 
+    start_date_str = str(start_date[0]) + '_' + str(start_date[1]) + '_' + str(start_date[2])
+    end_date_str = str(end_date[0]) + '_' + str(end_date[1]) + '_' + str(end_date[2])
+    new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".xlsx"
+    df.to_excel(new_csv_filename, index=False) 
     # upload the file to the storage
     blob = bucket.blob(new_csv_filename)
     blob.upload_from_filename(new_csv_filename)
@@ -89,7 +129,7 @@ def generateCSV(start_date, end_date):
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
 def home():
     form = InfoForm()
-    data = ref.get()
+    action_data = action_ref.get()
     res = session['res'] if 'res' in session else ''
     if res == 'Please enter a valid date range':
         session.pop('res')
@@ -98,7 +138,7 @@ def home():
         session['startdate'] = form.startdate.data
         session['enddate'] = form.enddate.data
         return redirect('generateCSV')
-    return render_template("index.html", val=data, form=form, res=res)
+    return render_template("index.html", val=action_data, form=form, res=res)
 
 
 @app.route("/updateDB")
@@ -113,7 +153,6 @@ def generate_csv():
     enddate = session['enddate']
     err_message = 'Please enter a valid date range'
     res = generateCSV(startdate, enddate)
-    print('res: ', res)
     if res == "ERROR":
         session['res'] = err_message
         return redirect(url_for("home", res=err_message))

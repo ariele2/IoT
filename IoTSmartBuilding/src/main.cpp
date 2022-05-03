@@ -2,6 +2,11 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <Firebase_ESP_Client.h>
+#include <string>
+#include <ctime>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#include "time.h"
 
 //Provide the token generation process info.
 #include "addons/TokenHelper.h"
@@ -9,8 +14,8 @@
 #include "addons/RTDBHelper.h"
 
 // Insert your network credentials
-#define WIFI_SSID "HOTBOX 4-0158"
-#define WIFI_PASSWORD "0544583887"
+#define WIFI_SSID "GalaxyS20-Ariel"
+#define WIFI_PASSWORD "04061997"
 
 // Insert Firebase project API Key
 #define API_KEY "AIzaSyCuLvDQQROn9LRXuxdiRhzE1ZmHgk_Bv4E"
@@ -24,20 +29,44 @@
 #define SITTING_DISTANCE 90 // the distance in cm in which we determine if someone is sitting
 #define FIREBASE_TIME_INTERVAL 6000 // time interval to send data for the firebase in ms
 
+
+using namespace std;
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 0;
+const int   daylightOffset_sec = 3600;
+
+
 //Define Firebase Data object
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
 unsigned long sendDataPrevMillis = 0;
-int count = 0, total_count = 0;
+int counter = 0, total_count = 0;
 bool signupOK = false;
 float duration_us, distance_cm;
 std::vector<int> error_vec = {0,0,0,0,0};
 int vec_count = 0, total_avg = 0;
-char* sitting = "NO";
+string sitting = "NO";
 
-void setup(){
+string genCurrTime() {
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+  }
+  timeinfo.tm_hour += 2; // Align to Israel clock
+  char buffer[32];
+  // format - dd/mm/yy hh:mm:ss
+  strftime(buffer,32, "%D %H:%M:%S", &timeinfo); 
+  string buffer_s = buffer;
+  replace(buffer_s.begin(), buffer_s.end(), '/', '-');
+  return buffer_s;
+}
+
+
+void setup() {
+  int wifi_c = 0;
   Serial.begin(9600);
   // configure the trigger pin to output mode
   pinMode(TRIG_PIN, OUTPUT);
@@ -53,7 +82,7 @@ void setup(){
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
   Serial.println();
-
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   /* Assign the api key (required) */
   config.api_key = API_KEY;
 
@@ -71,7 +100,6 @@ void setup(){
 
   /* Assign the callback function for the long running token generation task */
   config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
-  
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 }
@@ -88,19 +116,23 @@ void loop(){
   total_avg += distance_cm; // calculate the total distance so we can measure error with the sonar.
   total_count++;  
   if (distance_cm < SITTING_DISTANCE) { // increment count if we see someone sitting currently, otherwise decrement
-    count++;
+    counter++;
   }
   else {
-    count--;
+    counter--;
   }
   // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
     // update the error_vector
-    error_vec[vec_count] = count;
+    error_vec[vec_count] = counter;
     vec_count++;
     vec_count = vec_count % ERROR_VEC_LEN;  // make sure it is updated regularly withing the length range
     int sitting_counter = 0;
+    string curr_time = genCurrTime();
+    string sensorID = "000";
+    Serial.println("curr_time: ");
+    Serial.print(curr_time.c_str());
     for (int i=0; i<ERROR_VEC_LEN; i++) { // calculate the number of times someone was sitting in the last elements in the vector
       if (error_vec[i] > 0) {
         sitting_counter++;
@@ -110,7 +142,7 @@ void loop(){
       }
     }
     // last 2 elements were positive or in the last 6 there is a major of positive - someone is sitting
-    if ((count > 0 && error_vec[(vec_count-1)%ERROR_VEC_LEN] > 0) || (count < 0 && sitting_counter - 1 >= 0)) {
+    if ((counter > 0 && error_vec[(vec_count-1)%ERROR_VEC_LEN] > 0) || (counter < 0 && sitting_counter - 1 >= 0)) {
       sitting = "YES";
     }
     else {
@@ -119,24 +151,18 @@ void loop(){
     if (total_avg/total_count < 5.5) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
       sitting = "ERROR";
     }
-    if (Firebase.RTDB.setString(&fbdo, "test/sitting", std::string(sitting))){  // updates the firebase
-      // Serial.print("count: ");
-      // Serial.println(count);
-      // Serial.print("error_vec_counter: ");
-      // Serial.println(sitting_counter);
-      // Serial.print("total_avg: ");
-      // Serial.println(total_avg);
-      // Serial.print("total_count: ");
-      // Serial.println(total_count);
+    bool update_res = Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/CallID/", "0") && 
+                      Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/Value/", sitting);
+    if (update_res) {  // updates the firebase
       Serial.print("value: ");
-      Serial.println(sitting);
+      Serial.println(sitting.c_str());
       Serial.println("PATH: " + fbdo.dataPath());
     }
     else {
       Serial.println("FAILED");
       Serial.println("REASON: " + fbdo.errorReason());
     }
-    count = 0;
+    counter = 0;
     total_avg = 0;
     total_count = 0;
   }
