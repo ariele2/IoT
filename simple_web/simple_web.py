@@ -116,11 +116,14 @@ def generateCSV(start_date, end_date):
     # create the csv file
     start_date_str = str(start_date[0]) + '_' + str(start_date[1]) + '_' + str(start_date[2])
     end_date_str = str(end_date[0]) + '_' + str(end_date[1]) + '_' + str(end_date[2])
-    new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".xlsx"
-    df.to_excel(new_csv_filename, index=False) 
+    # new_xlsx_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".xlsx"
+    new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".csv"
+    # df.to_excel(new_xlsx_filename, index=False) 
+    df.to_csv(new_csv_filename, index=False)
     # upload the file to the storage
     blob = bucket.blob(new_csv_filename)
-    blob.upload_from_filename(new_csv_filename)
+    with open(new_csv_filename, 'rb') as f:
+        blob.upload_from_file(f)
     blob.make_public()
     # generate a download url and return it
     return blob.public_url
