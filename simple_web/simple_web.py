@@ -9,6 +9,7 @@ import pandas as pd
 import datetime
 from io import StringIO
 
+
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = '#$%^&*'

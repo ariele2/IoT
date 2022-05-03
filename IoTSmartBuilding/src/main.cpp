@@ -5,15 +5,15 @@
 #include <string>
 #include <ctime>
 #include <NTPClient.h>
-#include <WiFiUdp.h>
 #include "time.h"
+#include "esp_wpa2.h"
+#include <HTTPClient.h>
 
 //Provide the token generation process info.
 #include "addons/TokenHelper.h"
 //Provide the RTDB payload printing info and other helper functions.
 #include "addons/RTDBHelper.h"
 
-// Insert your network credentials
 #define WIFI_SSID "GalaxyS20-Ariel"
 #define WIFI_PASSWORD "04061997"
 
@@ -27,12 +27,13 @@
 #define ECHO_PIN 22 // ESP32 pin GIOP22 connected to Ultrasonic Sensor's ECHO pin
 #define ERROR_VEC_LEN 5 // error vec holds the last sitting events (yes/no/error)
 #define SITTING_DISTANCE 90 // the distance in cm in which we determine if someone is sitting
-#define FIREBASE_TIME_INTERVAL 6000 // time interval to send data for the firebase in ms
+#define FIREBASE_TIME_INTERVAL 30000 // time interval to send data for the firebase in ms
 
 
 using namespace std;
 
-const char* ntpServer = "pool.ntp.org";
+// ntp server to get the time
+const char* ntpServer = "pool.ntp.org"; 
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600;
 
@@ -42,36 +43,8 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-unsigned long sendDataPrevMillis = 0;
-int counter = 0, total_count = 0;
-bool signupOK = false;
-float duration_us, distance_cm;
-std::vector<int> error_vec = {0,0,0,0,0};
-int vec_count = 0, total_avg = 0;
-string sitting = "NO";
 
-string genCurrTime() {
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
-    Serial.println("Failed to obtain time");
-  }
-  timeinfo.tm_hour += 2; // Align to Israel clock
-  char buffer[32];
-  // format - dd/mm/yy hh:mm:ss
-  strftime(buffer,32, "%D %H:%M:%S", &timeinfo); 
-  string buffer_s = buffer;
-  replace(buffer_s.begin(), buffer_s.end(), '/', '-');
-  return buffer_s;
-}
-
-
-void setup() {
-  int wifi_c = 0;
-  Serial.begin(9600);
-  // configure the trigger pin to output mode
-  pinMode(TRIG_PIN, OUTPUT);
-  // configure the echo pin to input mode
-  pinMode(ECHO_PIN, INPUT);
+void connect2Wifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
@@ -82,11 +55,12 @@ void setup() {
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
   Serial.println();
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  /* Assign the api key (required) */
-  config.api_key = API_KEY;
+}
 
-  /* Assign the RTDB URL (required) */
+bool signupOK = false;
+
+void connect2Firebase() {
+  config.api_key = API_KEY;
   config.database_url = DATABASE_URL;
 
   /* Sign up */
@@ -103,6 +77,48 @@ void setup() {
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 }
+
+
+void setup() {
+  Serial.begin(9600);
+  // configure the trigger pins to sonar's output mode
+  pinMode(TRIG_PIN, OUTPUT);
+  // configure the echo pins to sonar's input mode
+  pinMode(ECHO_PIN, INPUT);
+
+  // connect to the wifi
+  connect2Wifi();
+
+  // ntp server configuration to get time
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+  // connect to firebase
+  connect2Firebase();
+}
+
+
+string genCurrTime() {
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+  }
+  timeinfo.tm_hour += 2; // Align to Israel clock
+  char buffer[32];
+  // format - dd/mm/yy hh:mm:ss
+  strftime(buffer,32, "%D %H:%M:%S", &timeinfo); 
+  string buffer_s = buffer;
+  replace(buffer_s.begin(), buffer_s.end(), '/', '-');
+  return buffer_s;
+}
+
+
+unsigned long sendDataPrevMillis = 0;
+int counter = 0, total_count = 0;
+float duration_us, distance_cm;
+std::vector<int> error_vec = {0,0,0,0,0};
+int vec_count = 0, total_avg = 0;
+string sitting = "NO";
+
 
 void loop(){
   // generate 10-microsecond pulse to TRIG pin (sonar)
