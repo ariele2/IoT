@@ -12,35 +12,35 @@ import queue
 import time
 
 
-def get_input(message, channel):
-    response = input(message)
-    channel.put(response)
+# def get_input(message, channel):
+#     response = input(message)
+#     channel.put(response)
 
 
-def input_with_timeout(message, timeout):
-    channel = queue.Queue()
-    message = message + " [{} sec timeout] ".format(timeout)
-    thread = threading.Thread(target=get_input, args=(message, channel))
-    # by setting this as a daemon thread, python won't wait for it to complete
-    thread.daemon = True
-    thread.start()
+# def input_with_timeout(message, timeout):
+#     channel = queue.Queue()
+#     message = message + " [{} sec timeout] ".format(timeout)
+#     thread = threading.Thread(target=get_input, args=(message, channel))
+#     # by setting this as a daemon thread, python won't wait for it to complete
+#     thread.daemon = True
+#     thread.start()
 
-    try:
-        response = channel.get(True, timeout)
-        return response
-    except queue.Empty:
-        pass
-    return None
+#     try:
+#         response = channel.get(True, timeout)
+#         return response
+#     except queue.Empty:
+#         pass
+#     return None
 
-command = input_with_timeout("Commands:", 5)
-time.sleep(3)
-if( command == 'exit'):
-	print (command)
-	exit(0)
-print (command)
+# command = input_with_timeout("Commands:", 5)
+# time.sleep(3)
+# if( command == 'exit'):
+# 	print (command)
+# 	exit(0)
+# print (command)
 
 
-cred_obj = firebase_admin.credentials.Certificate("/home/ariele/Desktop/iot/IoT/volumeSensor/iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
+cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path})
 ref = db.reference("/test/volume")
@@ -97,7 +97,7 @@ while(True):
 		# construct a blob from the input image and then perform a forward
 		# pass of the YOLO object detector, giving us our bounding boxes and
 		# associated probabilities
-		blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416),
+		blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (256, 256),	# changed from 416 to 256 reduces time *2
 			swapRB=True, crop=False)
 		net.setInput(blob)
 		start = time.time()
@@ -145,13 +145,12 @@ while(True):
 		idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"],
 			args["threshold"])
 
-		
+		count_error = 0
 		# ensure at least one detection exists
 		if len(idxs) > 0:
 			# loop over the indexes we are keeping
 			print("[DEBUG] len(idxs) = ", len(idxs))
 			print("[DEBUG] ClassIDs = ", classIDs)
-			count_error = 0
 			for i in idxs.flatten():
 				# extract the bounding box coordinates
 				(x, y) = (boxes[i][0], boxes[i][1])

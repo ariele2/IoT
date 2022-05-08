@@ -6,6 +6,7 @@
 #include <ctime>
 #include <NTPClient.h>
 #include "time.h"
+#include <timestamp.h>
 #include "esp_wpa2.h"
 #include <HTTPClient.h>
 
@@ -36,6 +37,7 @@ using namespace std;
 const char* ntpServer = "pool.ntp.org"; 
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600;
+
 
 
 //Define Firebase Data object
@@ -145,6 +147,7 @@ void loop(){
     vec_count++;
     vec_count = vec_count % ERROR_VEC_LEN;  // make sure it is updated regularly withing the length range
     int sitting_counter = 0;
+    auto string_time = Timestamp.Now().toString();  // check if its doing something
     string curr_time = genCurrTime();
     string sensorID = "000";
     Serial.println("curr_time: ");
