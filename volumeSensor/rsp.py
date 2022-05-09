@@ -10,6 +10,10 @@ import os
 import threading
 import queue
 import time
+import datetime
+import ntplib
+from time import ctime
+
 
 
 def get_input(message, channel):
@@ -36,7 +40,6 @@ debug_Mode = True
 time_between_frame = 5 
 exit_command = True
 time_to_exit = 5
-
 if exit_command:
 	command = input_with_timeout("Commands:", time_to_exit)
 	time.sleep(time_to_exit)
@@ -53,7 +56,8 @@ if exit_command:
 cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path})
-ref = db.reference("/test/volume")
+ref_data = db.reference("/data/")
+ref_real_data = db.reference("/real_data/")
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image", required=False,
@@ -88,6 +92,9 @@ net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 # initialize camera
 (W,H) = (None, None)
 prev_time = 0
+data_ref = db.reference('/data')
+real_data_ref = db.reference('/real_data')
+sensor_name = "V-01"
 # make a while loop that works every 30 secs
 while(True):
 	curr_time = time.time()
@@ -186,7 +193,18 @@ while(True):
 					count_error = count_error + 1
 		prev_time = curr_time
 		# show the output image
-		print("Found ", len(idxs) -count_error , "People")
+		num_of_pepole =len(idxs) -count_error 
+		print("Found ", num_of_pepole , "People")
+		c = ntplib.NTPClient()
+		response = c.request('il.pool.ntp.org', version=3)
+		ntp_time = ctime(response.tx_time)
+		date = datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S')  
+		call_id = data_ref.get()
+		ref_data.set({"call_id":call_id+1})
+		insert_data = {date + " " + sensor_name: {"value":str(num_of_pepole), "callID":str(call_id)}}
+		insert_real_data = {sensor_name:{"value":str(num_of_pepole), "callID":str(call_id), "time":date}}
+		data_ref.set(insert_data) 
+		real_data_ref.set(insert_real_data)
 		if debug_Mode:
 			cv2.imshow("Image"+str(curr_time), image)
 			cv2.waitKey(2000)
