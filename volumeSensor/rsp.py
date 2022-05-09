@@ -197,7 +197,7 @@ while(True):
 		print("Found ", num_of_pepole , "People")
 		c = ntplib.NTPClient()
 		response = c.request('il.pool.ntp.org', version=3)
-		ntp_time = ctime(response.tx_time)
+		ntp_time = response.tx_time
 		date = datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S')  
 		call_id = data_ref.get()
 		ref_data.set({"call_id":call_id+1})
