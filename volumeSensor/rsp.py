@@ -38,7 +38,7 @@ def input_with_timeout(message, timeout):
 	
 debug_Mode = True
 time_between_frame = 5 
-exit_command = True
+exit_command = False
 time_to_exit = 5
 if exit_command:
 	command = input_with_timeout("Commands:", time_to_exit)
@@ -200,6 +200,7 @@ while(True):
 		ntp_time = response.tx_time
 		date = datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S')  
 		call_id = data_ref.get()
+		print("call_id: ", call_id)
 		ref_data.set({"call_id":call_id+1})
 		insert_data = {date + " " + sensor_name: {"value":str(num_of_pepole), "callID":str(call_id)}}
 		insert_real_data = {sensor_name:{"value":str(num_of_pepole), "callID":str(call_id), "time":date}}
