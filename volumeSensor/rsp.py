@@ -12,35 +12,40 @@ import queue
 import time
 
 
-# def get_input(message, channel):
-#     response = input(message)
-#     channel.put(response)
+def get_input(message, channel):
+    response = input(message)
+    channel.put(response)
 
 
-# def input_with_timeout(message, timeout):
-#     channel = queue.Queue()
-#     message = message + " [{} sec timeout] ".format(timeout)
-#     thread = threading.Thread(target=get_input, args=(message, channel))
-#     # by setting this as a daemon thread, python won't wait for it to complete
-#     thread.daemon = True
-#     thread.start()
+def input_with_timeout(message, timeout):
+    channel = queue.Queue()
+    message = message + " [{} sec timeout] ".format(timeout)
+    thread = threading.Thread(target=get_input, args=(message, channel))
+    # by setting this as a daemon thread, python won't wait for it to complete
+    thread.daemon = True
+    thread.start()
 
-#     try:
-#         response = channel.get(True, timeout)
-#         return response
-#     except queue.Empty:
-#         pass
-#     return None
-
-# command = input_with_timeout("Commands:", 5)
-# time.sleep(3)
-# if( command == 'exit'):
-# 	print (command)
-# 	exit(0)
-# print (command)
-
+    try:
+        response = channel.get(True, timeout)
+        return response
+    except queue.Empty:
+        pass
+    return None
+	
 debug_Mode = True
 time_between_frame = 5 
+exit_command = True
+time_to_exit = 5
+
+if exit_command:
+	command = input_with_timeout("Commands:", time_to_exit)
+	time.sleep(time_to_exit)
+	if( command == 'exit'):
+		print (command)
+		exit(0)
+	print (command)
+
+
 
 
 
