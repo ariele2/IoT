@@ -198,7 +198,7 @@ while(True):
 		c = ntplib.NTPClient()
 		response = c.request('il.pool.ntp.org', version=3)
 		ntp_time = ctime(response.tx_time)
-		date = datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S')  
+		date = datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S')  
 		call_id = data_ref.get()
 		ref_data.set({"call_id":call_id+1})
 		insert_data = {date + " " + sensor_name: {"value":str(num_of_pepole), "callID":str(call_id)}}
