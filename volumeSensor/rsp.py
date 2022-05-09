@@ -39,6 +39,11 @@ import time
 # 	exit(0)
 # print (command)
 
+debug_Mode = True
+time_between_frame = 5 
+
+
+
 
 cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
@@ -64,13 +69,15 @@ np.random.seed(42)
 COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),
 	dtype="uint8")
 
-print("[DEBUG]: COLORS = ", COLORS)
+if debug_Mode:
+	print("[DEBUG]: COLORS = ", COLORS)
 
 # derive the paths to the YOLO weights and model configuration
 weightsPath = os.path.sep.join([args["yolo"], "yolov3.weights"])
 configPath = os.path.sep.join([args["yolo"], "yolov3.cfg"])
 # load our YOLO object detector trained on COCO dataset (80 classes)
-print("[INFO] loading YOLO from disk...")
+if debug_Mode:
+	print("[INFO] loading YOLO from disk...")
 net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
 # initialize camera
@@ -81,7 +88,7 @@ while(True):
 	curr_time = time.time()
 	# res, image = cam.read()
 	# cv2.imshow("Image", image)
-	if curr_time - prev_time > 20:
+	if curr_time - prev_time > time_between_frame:
 		cam = cv2.VideoCapture(0)
 		res, image = cam.read()
 		if not res:	#didn't capture an image
@@ -104,7 +111,8 @@ while(True):
 		layerOutputs = net.forward(ln)
 		end = time.time()
 		# show timing information on YOLO
-		print("[INFO] YOLO took {:.6f} seconds".format(end - start))
+		if debug_Mode:
+			print("[INFO] YOLO took {:.6f} seconds".format(end - start))
 
 		# initialize our lists of detected bounding boxes, confidences, and
 		# class IDs, respectively
@@ -139,7 +147,8 @@ while(True):
 					boxes.append([x, y, int(width), int(height)])
 					confidences.append(float(confidence))
 					classIDs.append(classID)
-		print("[DEBUG] Finished for output in layerOutputs")
+		if debug_Mode:
+			print("[DEBUG] Finished for output in layerOutputs")
 		# apply non-maxima suppression to suppress weak, overlapping bounding
 		# boxes
 		idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"],
@@ -148,15 +157,17 @@ while(True):
 		count_error = 0
 		# ensure at least one detection exists
 		if len(idxs) > 0:
-			# loop over the indexes we are keeping
-			print("[DEBUG] len(idxs) = ", len(idxs))
-			print("[DEBUG] ClassIDs = ", classIDs)
+			# loop over the indexes we are keeping 
+			if debug_Mode:
+				print("[DEBUG] len(idxs) = ", len(idxs))
+				print("[DEBUG] ClassIDs = ", classIDs)
 			for i in idxs.flatten():
 				# extract the bounding box coordinates
 				(x, y) = (boxes[i][0], boxes[i][1])
 				(w, h) = (boxes[i][2], boxes[i][3])
 				# draw a bounding box rectangle and label on the image
-				print("[DEBUG] ClassID = ", classID)
+				if debug_Mode:
+					print("[DEBUG] ClassID = ", classID)
 				if classIDs[i] <= 2:
 					color = [int(c) for c in COLORS[classIDs[i]]]
 					cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
@@ -164,14 +175,15 @@ while(True):
 					cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
 						0.5, color, 2)
 
-					if confidences[i] > 0.9:
+					if confidences[i] > 0.9 and debug_Mode:
 						print(confidences[i])
 				else:
 					count_error = count_error + 1
 		prev_time = curr_time
 		# show the output image
 		print("Found ", len(idxs) -count_error , "People")
-		cv2.imshow("Image"+str(curr_time), image)
-		cv2.waitKey(5000)
-		cv2.destroyAllWindows()
+		if debug_Mode:
+			cv2.imshow("Image"+str(curr_time), image)
+			cv2.waitKey(2000)
+			cv2.destroyAllWindows()
 		cam.release()
