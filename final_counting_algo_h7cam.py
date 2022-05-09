@@ -20,6 +20,7 @@ sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must be turned off for color tracking
 sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
+debuge_mode = True
 
 #initialize uart
 uart = UART(3, 9600, timeout_char=1000) # send data from port 3
@@ -28,10 +29,12 @@ uart.init(9600, bits=8, parity=None, stop=1, timeout_char=1000)
 extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
 
 # capture background image to compare movement to
-print("About to save background image...")
+if debuge_mode:
+    print("About to save background image...")
 sensor.skip_frames(time = 2000) # Give the user time to get ready.
 extra_fb.replace(sensor.snapshot())
-print("Saved background image - Now frame differencing!")
+if debuge_mode:
+    print("Saved background image - Now frame differencing!")
 counter = 0
 
 
@@ -40,7 +43,8 @@ while(True):
     img = sensor.snapshot()
     img.difference(extra_fb)
     # get ten frames
-    print("getting frames... ")
+    if debuge_mode:
+        print("getting frames... ")
     frame_num = 0
     captured_frames_cx = [0]*1 # initialize the array with 0
     dist_frames = []
@@ -55,7 +59,8 @@ while(True):
             img.draw_rectangle(captured_blob.rect())
             img.draw_cross(captured_blob.cx(), captured_blob.cy())
             frame_num += 1
-            print("fram_num: ", frame_num)
+            if debuge_mode:
+                print("fram_num: ", frame_num)
             # reset the delay if we found a moving object and didnt captured enough frames yet
             deadline_in = ticks_add(time.ticks_ms(), 1000)
         # time interval between each individual frame
@@ -68,8 +73,9 @@ while(True):
                 abs(captured_frames_cx[i+1]-captured_frames_cx[i])<MAX_FRAM_DIST:
             dist_frames.append(captured_frames_cx[i+1]-captured_frames_cx[i])
     if len(dist_frames)>= 3:    # need at least 3 elements in the array of frames to be relaiable
-        print("captured: ", captured_frames_cx)
-        print("calculated: ", dist_frames, "; sum = ", sum(dist_frames))
+        if debuge_mode:
+            print("captured: ", captured_frames_cx)
+            print("calculated: ", dist_frames, "; sum = ", sum(dist_frames))
         if sum(dist_frames) >= MOVEMENT_LIMIT:
             print("Someone entered!")
             counter -= 1
@@ -79,5 +85,6 @@ while(True):
     sensor.skip_frames(time = 1000)
 
     print("Currently inside: ", counter)
-    print(clock.fps())
-    print("==============================")
+    if debuge_mode:
+        print(clock.fps())
+        print("==============================")
