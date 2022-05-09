@@ -22,6 +22,7 @@ default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_pa
 csv_path = "csv_reports/"
 action_ref = db.reference("/action")
 data_ref = db.reference("/data")
+real_data_ref = db.reference("/real_data")
 bucket = storage.bucket()
 
 
@@ -29,6 +30,7 @@ class InfoForm(FlaskForm):
     startdate = DateField('', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     enddate = DateField('-', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     submit = SubmitField('Generate CSV')
+
 
 def updateDB():
     action_data = action_ref.get()
@@ -107,7 +109,7 @@ def generateCSV(start_date, end_date):
         for key, val in data.items():
             key_arr = key.split(" ")
             date, time, sensor_id = key_arr
-            date = arrangeQueryDate(date)
+            print("[DEBUG] date: ", date)
             if not inRange(date, start_date, end_date):
                 continue
             event = val['Value']
@@ -165,11 +167,29 @@ def generate_csv():
 @app.route("/status")
 def getStatus():
     # make a dict of all of the sensors (for now hard coded list) as keys, val initialized to 0
+    active_sensors = {'S-01':0, 'S-02':0, 'S-03':0,'S-04':0,'S-05':0,'S-06':0,'S-07':0,'S-08':0,'S-09':0,'S-10':0, 'D-01':0, 'V-01':0}
     # query the real_data from the realtime db
-    # each sensor that reported back a request that makes sense (not error), change it's val to 1
+    real_data = real_data_ref.get()
+    print("[DEBUG] real_data: ", real_data)
+    curr_time = datetime.datetime.now()
+    active_delta = datetime.timedelta(minutes=3)    # time that passed until asensor is inactive
+    for sensor in active_sensors.keys():
+        if sensor not in real_data:
+            continue
+        sensor_last_update_time = datetime.datetime.strptime(real_data[sensor]["time"], "%d-%m-%y %H:%M:%S")
+        print("[DEBUG] sensor_last_update_time - curr_time: ", sensor_last_update_time - curr_time)
+        if (sensor_last_update_time + active_delta >= curr_time):
+            if real_data[sensor]["value"] == "ERROR":
+                active_sensors[sensor] = 2
+            else:
+                active_sensors[sensor] = 1
+            print("[DEBUG]Sensor: '", sensor, "' is active")
+        else:
+            print("[DEBUG] Sensor: '", sensor, "' is not active")
+            active_sensors[sensor] = 0
     # pass the list to the return
     # loop through it in the html with JINGA and update the active sensors
-    return render_template("status.html")
+    return render_template("status.html", active_sensors=active_sensors)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=1234)
