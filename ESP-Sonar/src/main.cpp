@@ -171,23 +171,30 @@ void loop(){
   else {
     counter--;
   }
-  string curr_time = genCurrTime();
-  string sensorID = "000";
-  Serial.println("[DEBUG] curr_time: ");
-  Serial.print(curr_time.c_str());
   // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
-  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)){
+  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)) {
     sendDataPrevMillis = millis();
+    string curr_time = genCurrTime();
+    string sensorID = "000";
+    Serial.println("[DEBUG] curr_time: ");
+    Serial.print(curr_time.c_str());
     string sitting = calcaulateSitting();
-    int call_id = Firebase.RTDB.getInt(&fbdo, "data/call_id");
-    call_id ++;
+    int call_id;
+    if (Firebase.RTDB.getInt(&fbdo, "data/call_id")) {
+      call_id = fbdo.to<int>();
+    }
+    else {
+      Serial.println("FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
+    call_id += 1;
     string call_id_str = int2str(call_id);
     bool update_data_res = Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/callID", call_id_str) && 
-                           Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/value/", sitting) &&
+                           Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/value", sitting) &&
                            Firebase.RTDB.setInt(&fbdo, "data/call_id", call_id);
     bool update_real_data_res = Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/callID", call_id_str) && 
-                                Firebase.RTDB.setString(&fbdo, "data/"+sensorID+"/value/", sitting) &&
-                                Firebase.RTDB.setString(&fbdo, "data/time", curr_time);
+                                Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/value", sitting) &&
+                                Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/time", curr_time);
     if (update_data_res && update_real_data_res) {  // updates the firebase
       Serial.print("value: ");
       Serial.println(sitting.c_str());
