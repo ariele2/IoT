@@ -7,7 +7,6 @@ import firebase_admin
 from firebase_admin import db, credentials, initialize_app, storage
 import pandas as pd
 import datetime
-from io import StringIO
 
 
 app = Flask(__name__)
@@ -47,16 +46,6 @@ def date2num(date):
     month = datetime.datetime.strptime(list_date[2], "%b").month
     year = int(list_date[3])
     return [day,month,year]
-
-
-def arrangeQueryDate(date):
-    date_strings = date.split("-")
-    date = [int(d) for d in date_strings]
-    date[2] += 2000 # because we save it as 22 we need to add 2000
-    month = date[0]
-    date[0] = date[1]
-    date[1] = month
-    return date
 
 
 def validateDates(start_date, end_date):
@@ -164,28 +153,25 @@ def generate_csv():
         session['res'] = res
         return redirect(url_for("home", res=res))
 
+
 @app.route("/status")
 def getStatus():
     # make a dict of all of the sensors (for now hard coded list) as keys, val initialized to 0
     active_sensors = {'S-01':0, 'S-02':0, 'S-03':0,'S-04':0,'S-05':0,'S-06':0,'S-07':0,'S-08':0,'S-09':0,'S-10':0, 'D-01':0, 'V-01':0}
     # query the real_data from the realtime db
     real_data = real_data_ref.get()
-    print("[DEBUG] real_data: ", real_data)
     curr_time = datetime.datetime.now()
     active_delta = datetime.timedelta(minutes=3)    # time that passed until asensor is inactive
     for sensor in active_sensors.keys():
         if sensor not in real_data:
             continue
         sensor_last_update_time = datetime.datetime.strptime(real_data[sensor]["time"], "%d-%m-%y %H:%M:%S")
-        print("[DEBUG] sensor_last_update_time - curr_time: ", sensor_last_update_time - curr_time)
         if (sensor_last_update_time + active_delta >= curr_time):
             if real_data[sensor]["value"] == "ERROR":
                 active_sensors[sensor] = 2
             else:
                 active_sensors[sensor] = 1
-            print("[DEBUG]Sensor: '", sensor, "' is active")
         else:
-            print("[DEBUG] Sensor: '", sensor, "' is not active")
             active_sensors[sensor] = 0
     # pass the list to the return
     # loop through it in the html with JINGA and update the active sensors

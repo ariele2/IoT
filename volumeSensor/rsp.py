@@ -49,6 +49,11 @@ if exit_command:
 	print (command)
 
 
+def get_current_time():
+	c = ntplib.NTPClient()
+	response = c.request('il.pool.ntp.org', version=3)
+	ntp_time = response.tx_time
+	return datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S') 
 
 
 
@@ -94,7 +99,8 @@ net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 prev_time = 0
 data_ref = db.reference('/data')
 real_data_ref = db.reference('/real_data')
-sensor_name = "V-01"
+caller_ref = db.reference('data/call_id')
+sensorID = "V-01"
 # make a while loop that works every 30 secs
 while(True):
 	curr_time = time.time()
@@ -195,20 +201,14 @@ while(True):
 		# show the output image
 		num_of_pepole =len(idxs) -count_error 
 		print("Found ", num_of_pepole , "People")
-		c = ntplib.NTPClient()
-		response = c.request('il.pool.ntp.org', version=3)
-		ntp_time = response.tx_time
-		date = datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S')  
-		data = data_ref.get()
-		print("data: ", data)
-		call_id = data["call_id"]
-		data["call_id"] = call_id + 1
-		print("data: ", data)
-		ref_data.set(data)
-		insert_data = {date + " " + sensor_name: {"value":str(num_of_pepole), "callID":str(call_id)}}
-		insert_real_data = {sensor_name:{"value":str(num_of_pepole), "callID":str(call_id), "time":date}}
-		data_ref.set(insert_data) 
-		real_data_ref.set(insert_real_data)
+		time_str = get_current_time()  
+		print("time_str: ", time_str)
+		call_id = caller_ref.get()[sensorID]
+		insert_data = {time_str + " " + sensorID: {"value":str(num_of_pepole), "callID":str(call_id)}}
+		insert_real_data = {sensorID:{"value":str(num_of_pepole), "callID":str(call_id), "time":time_str}}
+		data_ref.update(insert_data) 
+		caller_ref.update({sensorID:call_id+1})
+		real_data_ref.update(insert_real_data)
 		if debug_Mode:
 			cv2.imshow("Image"+str(curr_time), image)
 			cv2.waitKey(2000)
