@@ -3,19 +3,17 @@
 #include <WiFi.h>
 #include <Firebase_ESP_Client.h>
 #include <string>
+#include <sstream>
 #include <ctime>
 #include <NTPClient.h>
 #include "time.h"
-#include <timestamp.h>
 #include "esp_wpa2.h"
 #include <HTTPClient.h>
-
-//Provide the token generation process info.
 #include "addons/TokenHelper.h"
-//Provide the RTDB payload printing info and other helper functions.
 #include "addons/RTDBHelper.h"
 
-#define WIFI_SSID "GalaxyS20-Ariel"
+
+#define WIFI_SSID "S20-Ariel"
 #define WIFI_PASSWORD "04061997"
 
 // Insert Firebase project API Key
@@ -48,7 +46,8 @@ FirebaseConfig config;
 
 void connect2Wifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to Wi-Fi");
+  Serial.print("Connecting to Wi-Fi ");
+  Serial.print(WIFI_SSID);
   while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
     Serial.print(".");
     delay(300);
@@ -101,15 +100,15 @@ void setup() {
 
 string genCurrTime() {
   struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
+  if(!getLocalTime(&timeinfo)) {
     Serial.println("Failed to obtain time");
   }
   timeinfo.tm_hour += 2; // Align to Israel clock
   char buffer[32];
   // format - dd/mm/yy hh:mm:ss
-  strftime(buffer,32, "%D %H:%M:%S", &timeinfo); 
+  strftime(buffer,32, "%d-%m-%y %H:%M:%S", &timeinfo); 
   string buffer_s = buffer;
-  replace(buffer_s.begin(), buffer_s.end(), '/', '-');
+  // replace(buffer_s.begin(), buffer_s.end(), '/', '-');
   return buffer_s;
 }
 
@@ -117,9 +116,42 @@ string genCurrTime() {
 unsigned long sendDataPrevMillis = 0;
 int counter = 0, total_count = 0;
 float duration_us, distance_cm;
-std::vector<int> error_vec = {0,0,0,0,0};
 int vec_count = 0, total_avg = 0;
-string sitting = "NO";
+
+string calcaulateSitting() {
+  string sitting = "NO";
+  std::vector<int> error_vec = {0,0,0,0,0};
+  error_vec[vec_count] = counter;
+    vec_count++;
+    vec_count = vec_count % ERROR_VEC_LEN;  // make sure it is updated regularly withing the length range
+    int sitting_counter = 0;
+    for (int i=0; i<ERROR_VEC_LEN; i++) { // calculate the number of times someone was sitting in the last elements in the vector
+      if (error_vec[i] > 0) {
+        sitting_counter++;
+      }
+      else {
+        sitting_counter--;
+      }
+    }
+    // last 2 elements were positive or in the last 6 there is a major of positive - someone is sitting
+    if ((counter > 0 && error_vec[(vec_count-1)%ERROR_VEC_LEN] > 0) || (counter < 0 && sitting_counter - 1 >= 0)) {
+      sitting = "YES";
+    }
+    else {
+      sitting = "NO";
+    }
+    if (total_avg/total_count < 5.5) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
+      sitting = "ERROR";
+    }
+  return sitting;
+}
+
+
+string int2str(int num) {
+  ostringstream temp;
+  temp << num;
+  return temp.str();
+}
 
 
 void loop(){
@@ -139,40 +171,24 @@ void loop(){
   else {
     counter--;
   }
+  string curr_time = genCurrTime();
+  string sensorID = "000";
+  Serial.println("[DEBUG] curr_time: ");
+  Serial.print(curr_time.c_str());
   // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
-    // update the error_vector
-    error_vec[vec_count] = counter;
-    vec_count++;
-    vec_count = vec_count % ERROR_VEC_LEN;  // make sure it is updated regularly withing the length range
-    int sitting_counter = 0;
-    auto string_time = Timestamp.Now().toString();  // check if its doing something
-    string curr_time = genCurrTime();
-    string sensorID = "000";
-    Serial.println("curr_time: ");
-    Serial.print(curr_time.c_str());
-    for (int i=0; i<ERROR_VEC_LEN; i++) { // calculate the number of times someone was sitting in the last elements in the vector
-      if (error_vec[i] > 0) {
-        sitting_counter++;
-      }
-      else {
-        sitting_counter--;
-      }
-    }
-    // last 2 elements were positive or in the last 6 there is a major of positive - someone is sitting
-    if ((counter > 0 && error_vec[(vec_count-1)%ERROR_VEC_LEN] > 0) || (counter < 0 && sitting_counter - 1 >= 0)) {
-      sitting = "YES";
-    }
-    else {
-      sitting = "NO";
-    }
-    if (total_avg/total_count < 5.5) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
-      sitting = "ERROR";
-    }
-    bool update_res = Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/CallID/", "0") && 
-                      Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/Value/", sitting);
-    if (update_res) {  // updates the firebase
+    string sitting = calcaulateSitting();
+    int call_id = Firebase.RTDB.getInt(&fbdo, "data/call_id");
+    call_id ++;
+    string call_id_str = int2str(call_id);
+    bool update_data_res = Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/callID", call_id_str) && 
+                           Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/value/", sitting) &&
+                           Firebase.RTDB.setInt(&fbdo, "data/call_id", call_id);
+    bool update_real_data_res = Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/callID", call_id_str) && 
+                                Firebase.RTDB.setString(&fbdo, "data/"+sensorID+"/value/", sitting) &&
+                                Firebase.RTDB.setString(&fbdo, "data/time", curr_time);
+    if (update_data_res && update_real_data_res) {  // updates the firebase
       Serial.print("value: ");
       Serial.println(sitting.c_str());
       Serial.println("PATH: " + fbdo.dataPath());
