@@ -200,7 +200,7 @@ while(True):
 		ntp_time = response.tx_time
 		date = datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S')  
 		data = data_ref.get()
-		call_id = data_ref["call_id"]
+		call_id = data["call_id"]
 		data["call_id"] = call_id + 1
 		ref_data.set(data)
 		insert_data = {date + " " + sensor_name: {"value":str(num_of_pepole), "callID":str(call_id)}}
