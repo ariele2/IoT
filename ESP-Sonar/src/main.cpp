@@ -13,8 +13,9 @@
 #include "addons/RTDBHelper.h"
 
 
-#define WIFI_SSID "S20-Ariel"
-#define WIFI_PASSWORD "04061997"
+
+#define WIFI_SSID "TechPublic"
+#define WIFI_PASSWORD ""
 
 // Insert Firebase project API Key
 #define API_KEY "AIzaSyCuLvDQQROn9LRXuxdiRhzE1ZmHgk_Bv4E"
@@ -97,13 +98,42 @@ void setup() {
   connect2Firebase();
 }
 
+String serverPath = "http://just-the-time.appspot.com/";
 
 string genCurrTime() {
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)) {
-    Serial.println("Failed to obtain time");
+  HTTPClient http;
+  http.begin(serverPath.c_str());
+  int httpResponseCode = http.GET();
+  String payload;
+  if (httpResponseCode > 0) {
+    payload = http.getString();
+    Serial.print("Payload: ");
+    Serial.println(payload);
   }
-  timeinfo.tm_hour += 2; // Align to Israel clock
+  else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+  http.end();
+  string date = payload.c_str();
+  string year = date.substr(2,2);
+  string month = date.substr(5,2);
+  string day = date.substr(8,2);
+  string hour = date.substr(11);
+  string formated_date = day + "-" + month + "-" + year + " " + hour;
+  Serial.print("day: ");
+  Serial.println(day.c_str());
+  Serial.print("month: ");
+  Serial.println(month.c_str());
+  Serial.print("year: ");
+  Serial.println(year.c_str());
+  Serial.print("hour: ");
+  Serial.println(hour.c_str());
+  Serial.print("formated date: ");
+  Serial.println(formated_date.c_str());
+  struct tm timeinfo;
+  strptime(formated_date.c_str(), "%d-%m-%y %H:%M:%S", &timeinfo);
+  timeinfo.tm_hour += 3; // Align to Israel clock
   char buffer[32];
   // format - dd/mm/yy hh:mm:ss
   strftime(buffer,32, "%d-%m-%y %H:%M:%S", &timeinfo); 
