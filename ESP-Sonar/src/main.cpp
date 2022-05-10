@@ -4,13 +4,14 @@
 #include <Firebase_ESP_Client.h>
 #include <string>
 #include <sstream>
-#include <ctime>
+#include <fstream>
 #include <NTPClient.h>
 #include "time.h"
 #include "esp_wpa2.h"
 #include <HTTPClient.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
+#include <map>
 
 
 
@@ -31,11 +32,6 @@
 
 
 using namespace std;
-
-// ntp server to get the time
-const char* ntpServer = "pool.ntp.org"; 
-const long  gmtOffset_sec = 0;
-const int   daylightOffset_sec = 3600;
 
 
 
@@ -80,6 +76,7 @@ void connect2Firebase() {
   Firebase.reconnectWiFi(true);
 }
 
+std::map<string, pair<vector<int>, vector<int>>> sensors_dist;
 
 void setup() {
   Serial.begin(9600);
@@ -96,6 +93,17 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
+
+
+  // {sensorID:{TRIG_PIN,ECHO_PIN,distance,total distance, last_seen}
+  vector<int> error_vec = {0,0,0,0,0};
+  vector<int> vec_s01 = {TRIG_PIN,ECHO_PIN,0,0};
+  vector<int> vec_s02 = {0,0,0,0};
+  vector<int> vec_s03 = {0,0,0,0};
+  vector<int> vec_s04 = {0,0,0,0};
+  vector<int> vec_s05 = {0,0,0,0};
+  sensors_dist = {{"S-01",{vec_s01, error_vec}}, {"S-02",{vec_s02, error_vec}}, {"S-03",{vec_s03, error_vec}}, 
+                  {"S-04",{vec_s04, error_vec}}, {"S-05",{vec_s05, error_vec}}};
 }
 
 String serverPath = "http://just-the-time.appspot.com/";
@@ -121,16 +129,6 @@ string genCurrTime() {
   string day = date.substr(8,2);
   string hour = date.substr(11);
   string formated_date = day + "-" + month + "-" + year + " " + hour;
-  Serial.print("day: ");
-  Serial.println(day.c_str());
-  Serial.print("month: ");
-  Serial.println(month.c_str());
-  Serial.print("year: ");
-  Serial.println(year.c_str());
-  Serial.print("hour: ");
-  Serial.println(hour.c_str());
-  Serial.print("formated date: ");
-  Serial.println(formated_date.c_str());
   struct tm timeinfo;
   strptime(formated_date.c_str(), "%d-%m-%y %H:%M:%S", &timeinfo);
   timeinfo.tm_hour += 3; // Align to Israel clock
@@ -143,36 +141,39 @@ string genCurrTime() {
 }
 
 
-unsigned long sendDataPrevMillis = 0;
-int counter = 0, total_count = 0;
-float duration_us, distance_cm;
-int vec_count = 0, total_avg = 0;
+int total_count = 0;
 
-string calcaulateSitting() {
-  string sitting = "NO";
-  std::vector<int> error_vec = {0,0,0,0,0};
+string calcaulateSitting(int distance, int tot_distance, vector<int> error_vec) {
+  int vec_count = 0, counter = 0;
+  if (distance < SITTING_DISTANCE) { // increment count if we see someone sitting currently, otherwise decrement
+    counter++;
+  }
+  else {
+    counter--;
+  }
+  string sitting = "";
   error_vec[vec_count] = counter;
-    vec_count++;
-    vec_count = vec_count % ERROR_VEC_LEN;  // make sure it is updated regularly withing the length range
-    int sitting_counter = 0;
-    for (int i=0; i<ERROR_VEC_LEN; i++) { // calculate the number of times someone was sitting in the last elements in the vector
-      if (error_vec[i] > 0) {
-        sitting_counter++;
-      }
-      else {
-        sitting_counter--;
-      }
-    }
-    // last 2 elements were positive or in the last 6 there is a major of positive - someone is sitting
-    if ((counter > 0 && error_vec[(vec_count-1)%ERROR_VEC_LEN] > 0) || (counter < 0 && sitting_counter - 1 >= 0)) {
-      sitting = "YES";
+  vec_count++;
+  vec_count = vec_count % ERROR_VEC_LEN;  // make sure it is updated regularly withing the length range
+  int sitting_counter = 0;
+  for (int i=0; i<ERROR_VEC_LEN; i++) { // calculate the number of times someone was sitting in the last elements in the vector
+    if (error_vec[i] > 0) {
+      sitting_counter++;
     }
     else {
-      sitting = "NO";
+      sitting_counter--;
     }
-    if (total_avg/total_count < 5.5) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
-      sitting = "ERROR";
-    }
+  }
+  // last 2 elements were positive or in the last 6 there is a major of positive - someone is sitting
+  if ((counter > 0 && error_vec[(vec_count-1)%ERROR_VEC_LEN] > 0) || (counter < 0 && sitting_counter - 1 >= 0)) {
+    sitting = "YES";
+  }
+  else {
+    sitting = "NO";
+  }
+  if (total_count!= 0 && tot_distance/total_count < 5.5) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
+    sitting = "ERROR";
+  }
   return sitting;
 }
 
@@ -184,61 +185,73 @@ string int2str(int num) {
 }
 
 
-void loop(){
+int calcDistance(int trig_pin, int echo_pin) {
+  float duration_us, distance_cm;
   // generate 10-microsecond pulse to TRIG pin (sonar)
-  digitalWrite(TRIG_PIN, HIGH);
+  digitalWrite(trig_pin, HIGH);
   delayMicroseconds(10);
-  digitalWrite(TRIG_PIN, LOW);
+  digitalWrite(trig_pin, LOW);
   // measure duration of pulse from ECHO pin
-  duration_us = pulseIn(ECHO_PIN, HIGH);
+  duration_us = pulseIn(echo_pin, HIGH);
   // calculate the distance
   distance_cm = 0.017 * duration_us;
-  total_avg += distance_cm; // calculate the total distance so we can measure error with the sonar.
-  total_count++;  
-  if (distance_cm < SITTING_DISTANCE) { // increment count if we see someone sitting currently, otherwise decrement
-    counter++;
+  return static_cast<int>(distance_cm);
+}
+
+void updateDB(string sensorID, vector<int> sensor_data, vector<int> error_vec) {
+  string curr_time = genCurrTime();
+  Serial.println("[DEBUG] curr_time: ");
+  Serial.print(curr_time.c_str());
+  string sitting = calcaulateSitting(sensor_data[2], sensor_data[3], error_vec);
+  int call_id = 0;
+  if (Firebase.RTDB.getInt(&fbdo, "data/call_id/"+sensorID)) {
+    call_id = fbdo.to<int>();
+    if (call_id == 0) {
+      Firebase.RTDB.setInt(&fbdo, "data/call_id/"+sensorID, ++call_id);
+    }
   }
   else {
-    counter--;
+    Serial.println("FAILED");
+    Serial.println("REASON: " + fbdo.errorReason());
   }
+  string call_id_str = int2str(call_id);
+  call_id += 1;
+  bool update_data_res = Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/callID", call_id_str) && 
+                          Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/value", sitting) &&
+                          Firebase.RTDB.setInt(&fbdo, "data/call_id/"+sensorID, call_id);
+  bool update_real_data_res = Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/callID", call_id_str) && 
+                              Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/value", sitting) &&
+                              Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/time", curr_time);
+  if (update_data_res && update_real_data_res) {  // updates the firebase
+    Serial.print("value: ");
+    Serial.println(sitting.c_str());
+    Serial.println("PATH: " + fbdo.dataPath());
+  }
+  else {
+    Serial.println("FAILED");
+    Serial.println("REASON: " + fbdo.errorReason());
+  }
+}
+
+
+unsigned long sendDataPrevMillis = 0;
+void loop(){
+  // loop through the sensors and get distance data
+  for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and get data for each of them
+    vector<int> data_vec = (it->second).first;
+    data_vec[3] = calcDistance(data_vec[0], data_vec[1]); // distance
+    data_vec[4] += data_vec[3];  //total distance
+  }
+  total_count++;  
   // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)) {
     sendDataPrevMillis = millis();
-    string curr_time = genCurrTime();
-    string sensorID = "S-01";
-    Serial.println("[DEBUG] curr_time: ");
-    Serial.print(curr_time.c_str());
-    string sitting = calcaulateSitting();
-    int call_id = 0;
-    if (Firebase.RTDB.getInt(&fbdo, "data/call_id/"+sensorID)) {
-      call_id = fbdo.to<int>();
-      if (call_id == 0) {
-        Firebase.RTDB.setInt(&fbdo, "data/call_id/"+sensorID, ++call_id);
-      }
+    for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and update data 
+      vector<int> data_vec = (it->second).first;
+      vector<int> error_vec = (it->second).second;
+      updateDB(it->first, data_vec, error_vec);
+      // reset the distance and total distance for new calculation
     }
-    else {
-      Serial.println("FAILED");
-      Serial.println("REASON: " + fbdo.errorReason());
-    }
-    string call_id_str = int2str(call_id);
-    call_id += 1;
-    bool update_data_res = Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/callID", call_id_str) && 
-                           Firebase.RTDB.setString(&fbdo, "data/"+curr_time+" "+sensorID+"/value", sitting) &&
-                           Firebase.RTDB.setInt(&fbdo, "data/call_id/"+sensorID, call_id);
-    bool update_real_data_res = Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/callID", call_id_str) && 
-                                Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/value", sitting) &&
-                                Firebase.RTDB.setString(&fbdo, "real_data/"+sensorID+"/time", curr_time);
-    if (update_data_res && update_real_data_res) {  // updates the firebase
-      Serial.print("value: ");
-      Serial.println(sitting.c_str());
-      Serial.println("PATH: " + fbdo.dataPath());
-    }
-    else {
-      Serial.println("FAILED");
-      Serial.println("REASON: " + fbdo.errorReason());
-    }
-    counter = 0;
-    total_avg = 0;
     total_count = 0;
   }
 }
