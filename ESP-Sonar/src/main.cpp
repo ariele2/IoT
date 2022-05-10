@@ -165,7 +165,7 @@ string genCurrTime() {
 }
 
 
-int total_count = 0;
+const int total_count = 1000; // depends on the loops iteration we provide
 
 string calcaulateSitting(int counter, int tot_distance, vector<int> error_vec) {
   int vec_count = 0;
@@ -203,7 +203,7 @@ string int2str(int num) {
 }
 
 
-vector<int> calcDistance(int trig_pin, int echo_pin) {
+vector<int> calcSitCounter(int trig_pin, int echo_pin) {
   int i = 0, tot_distance = 0;
   while (i < 1000) {
     float duration_us, distance_cm;
@@ -290,17 +290,19 @@ void loop(){
   Serial.println();
   // loop through the sensors and get distance data
   for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and get data for each of them
-  vector<int> recv;
-    Serial.println("[DEBUG] calculating distances stage ");
+    vector<int> recv;
+    Serial.println("[DEBUG] calculating how many times someone signaled as sit stage ");
     Serial.print("[DEBUG] sensorID: ");
     Serial.print(((it->first).first).c_str());
     vector<int> data_vec = (it->second).first;
-    recv = calcDistance(data_vec[0], data_vec[1]); // distance
+    recv = calcSitCounter(data_vec[0], data_vec[1]); // distance
     data_vec[3] = recv[0];  // holds counter
     data_vec[4] = recv[1];  // total distance
-    Serial.print("distance: ", data_vec[3]);
+    Serial.print("; counter: ");
+    Serial.print(data_vec[3]);
+    Serial.print("; total distance: ");
+    Serial.println(data_vec[4]);
   }
-  total_count++;  
   // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
   if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)) {
     sendDataPrevMillis = millis();
