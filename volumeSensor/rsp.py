@@ -13,6 +13,7 @@ import time
 import datetime
 import ntplib
 from time import ctime
+from urllib.request import urlopen
 
 
 
@@ -50,10 +51,21 @@ if exit_command:
 
 
 def get_current_time():
-	c = ntplib.NTPClient()
-	response = c.request('il.pool.ntp.org', version=3)
-	ntp_time = response.tx_time
-	return datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S') 
+	res = urlopen('http://just-the-time.appspot.com/')
+	result = res.read().strip()
+	result_str = result.decode('utf-8')
+	day = result_str[8:10]
+	month = result_str[5:7]
+	year = result_str[2:4]
+	hour = datetime.datetime.strptime(result_str[11:], "%H:%M:%S")
+	hour += datetime.timedelta(hours=3)
+	hour = hour.strftime("%H:%M:%S")
+	to_ret = day + "-" + month + "-" + year + " " + hour
+	# c = ntplib.NTPClient()
+	# response = c.request('il.pool.ntp.org', version=3)
+	# ntp_time = response.tx_time
+	# return datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S') 
+	return to_ret
 
 
 
@@ -199,7 +211,7 @@ while(True):
 					count_error = count_error + 1
 		prev_time = curr_time
 		# show the output image
-		num_of_pepole =len(idxs) -count_error 
+		num_of_pepole = len(idxs) - count_error 
 		print("Found ", num_of_pepole , "People")
 		time_str = get_current_time()  
 		print("time_str: ", time_str)
