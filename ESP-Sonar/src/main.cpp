@@ -76,6 +76,14 @@ void connect2Firebase() {
   Firebase.reconnectWiFi(true);
 }
 
+
+void removeCharsFromString(string &str, char* charsToRemove) {
+   for ( unsigned int i = 0; i < strlen(charsToRemove); ++i ) {
+      str.erase( remove(str.begin(), str.end(), charsToRemove[i]), str.end() );
+   }
+}
+
+
 std::map<string, pair<vector<int>, vector<int>>> sensors_dist;
 
 void setup() {
@@ -88,12 +96,30 @@ void setup() {
   // connect to the wifi
   connect2Wifi();
 
-  // ntp server configuration to get time
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
   // connect to firebase
   connect2Firebase();
 
+  vector<string> sensors_ids;
+
+  if (Firebase.RTDB.getString(&fbdo, "sensors/")) {
+    int sens_count = 0;
+    string sensors_string = fbdo.to<string>();
+    Serial.print("sensors_string: ");
+    Serial.println(sensors_string.c_str());
+    while (sens_count < 5) {
+      int sensor_pos = sensors_string.find_first_of(',');
+      string sensor = sensors_string.substr(0,sensor_pos);
+      removeCharsFromString(sensor, "[\"]");
+      Serial.print(sens_count);
+      Serial.print(" [DEBUG] sensor: ");
+      Serial.println(sensor.c_str());
+      sensors_ids.push_back(sensor);
+      sensors_string = sensors_string.substr(sensor_pos+1);
+      Serial.print("[DEBUG] sensors_string: ");
+      Serial.println(sensors_string.c_str());
+      sens_count++;
+    }
+  }
 
   // {sensorID:{TRIG_PIN,ECHO_PIN,distance,total distance, last_seen}
   vector<int> error_vec = {0,0,0,0,0};
@@ -102,8 +128,8 @@ void setup() {
   vector<int> vec_s03 = {0,0,0,0};
   vector<int> vec_s04 = {0,0,0,0};
   vector<int> vec_s05 = {0,0,0,0};
-  sensors_dist = {{"S-01",{vec_s01, error_vec}}, {"S-02",{vec_s02, error_vec}}, {"S-03",{vec_s03, error_vec}}, 
-                  {"S-04",{vec_s04, error_vec}}, {"S-05",{vec_s05, error_vec}}};
+  sensors_dist = {{sensors_ids[0],{vec_s01, error_vec}}, {sensors_ids[1],{vec_s02, error_vec}}, {sensors_ids[2],{vec_s03, error_vec}}, 
+                  {sensors_ids[3],{vec_s04, error_vec}}, {sensors_ids[4],{vec_s05, error_vec}}};
 }
 
 String serverPath = "http://just-the-time.appspot.com/";
@@ -115,8 +141,6 @@ string genCurrTime() {
   String payload;
   if (httpResponseCode > 0) {
     payload = http.getString();
-    Serial.print("Payload: ");
-    Serial.println(payload);
   }
   else {
     Serial.print("Error code: ");
@@ -143,14 +167,8 @@ string genCurrTime() {
 
 int total_count = 0;
 
-string calcaulateSitting(int distance, int tot_distance, vector<int> error_vec) {
-  int vec_count = 0, counter = 0;
-  if (distance < SITTING_DISTANCE) { // increment count if we see someone sitting currently, otherwise decrement
-    counter++;
-  }
-  else {
-    counter--;
-  }
+string calcaulateSitting(int counter, int tot_distance, vector<int> error_vec) {
+  int vec_count = 0;
   string sitting = "";
   error_vec[vec_count] = counter;
   vec_count++;
@@ -185,23 +203,36 @@ string int2str(int num) {
 }
 
 
-int calcDistance(int trig_pin, int echo_pin) {
-  float duration_us, distance_cm;
-  // generate 10-microsecond pulse to TRIG pin (sonar)
-  digitalWrite(trig_pin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trig_pin, LOW);
-  // measure duration of pulse from ECHO pin
-  duration_us = pulseIn(echo_pin, HIGH);
-  // calculate the distance
-  distance_cm = 0.017 * duration_us;
-  return static_cast<int>(distance_cm);
+vector<int> calcDistance(int trig_pin, int echo_pin) {
+  int i = 0, tot_distance = 0;
+  while (i < 1000) {
+    float duration_us, distance_cm;
+    // generate 10-microsecond pulse to TRIG pin (sonar)
+    digitalWrite(trig_pin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trig_pin, LOW);
+    // measure duration of pulse from ECHO pin
+    duration_us = pulseIn(echo_pin, HIGH);
+    // calculate the distance
+    distance_cm = 0.017 * duration_us;
+    if (distance_cm < SITTING_DISTANCE) { // increment count if we see someone sitting currently, otherwise decrement
+      counter++;
+    }
+    else {
+      counter--;
+    }
+    tot_distance += distance_cm;
+    i++;
+  }
+  vector<int> data = {counter, tot_distance};
+  return data;
 }
 
 void updateDB(string sensorID, vector<int> sensor_data, vector<int> error_vec) {
+
   string curr_time = genCurrTime();
-  Serial.println("[DEBUG] curr_time: ");
-  Serial.print(curr_time.c_str());
+  Serial.print("[DEBUG] curr_time: ");
+  Serial.println(curr_time.c_str());
   string sitting = calcaulateSitting(sensor_data[2], sensor_data[3], error_vec);
   int call_id = 0;
   if (Firebase.RTDB.getInt(&fbdo, "data/call_id/"+sensorID)) {
@@ -234,13 +265,40 @@ void updateDB(string sensorID, vector<int> sensor_data, vector<int> error_vec) {
 }
 
 
+void checkAction() {
+  if (Firebase.RTDB.getString(&fbdo, "action/")) {
+    string action = fbdo.to<string>();
+    Serial.print("[DEBUG] action: ");
+    Serial.println(action.c_str());
+    while (action.compare("off")==0) {
+      Firebase.RTDB.getString(&fbdo, "action/");
+      action = fbdo.to<string>();
+      Serial.println("System is off!");
+      vTaskDelay(5000);
+    }
+  }
+}
+
+
 unsigned long sendDataPrevMillis = 0;
 void loop(){
+  Serial.println("[DEBUG] main loop ");
+  Serial.println("[DEBUG] check action stage ");
+  // check if system is on
+  checkAction();
+  Serial.println("[DEBUG] check action finished ");
+  Serial.println();
   // loop through the sensors and get distance data
   for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and get data for each of them
+  vector<int> recv;
+    Serial.println("[DEBUG] calculating distances stage ");
+    Serial.print("[DEBUG] sensorID: ");
+    Serial.print(((it->first).first).c_str());
     vector<int> data_vec = (it->second).first;
-    data_vec[3] = calcDistance(data_vec[0], data_vec[1]); // distance
-    data_vec[4] += data_vec[3];  //total distance
+    recv = calcDistance(data_vec[0], data_vec[1]); // distance
+    data_vec[3] = recv[0];  // holds counter
+    data_vec[4] = recv[1];  // total distance
+    Serial.print("distance: ", data_vec[3]);
   }
   total_count++;  
   // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
