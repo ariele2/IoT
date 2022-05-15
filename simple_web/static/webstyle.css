@@ -54,22 +54,10 @@ h1 {
     font-size: 40px;
     font-weight: bold;
     position: relative;
-    top: 60%;
-    right: 35%;
 }
 
 .col-xs-12, .col-xs-5, .col-xs-2 {
     margin-top: 3% !important;
-}
-
-.endPicker {
-    position: relative;
-    right: 17%;
-}
-
-.startPicker {
-    position: relative;
-    right: 1%;
 }
 
 .generateBtn {
@@ -85,4 +73,8 @@ h1 {
 
 .downloadBtn {
     right: 3.5%;
+}
+
+.card-p {
+    font-size: 110%;
 }

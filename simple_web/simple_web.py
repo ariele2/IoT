@@ -1,6 +1,6 @@
 from flask import Flask, redirect, url_for, render_template, session
 from flask_wtf import FlaskForm
-from wtforms.fields import DateField
+from wtforms.fields import DateField, StringField, SelectField, TextAreaField, FileField
 from wtforms.validators import DataRequired
 from wtforms import validators, SubmitField
 import firebase_admin
@@ -8,6 +8,7 @@ from firebase_admin import db, credentials, initialize_app, storage
 import pandas as pd
 import datetime
 from io import StringIO
+import re
 
 
 app = Flask(__name__)
@@ -23,6 +24,7 @@ csv_path = "csv_reports/"
 action_ref = db.reference("/action")
 data_ref = db.reference("/data")
 real_data_ref = db.reference("/real_data")
+sensors_ref = db.reference("/sensors")
 bucket = storage.bucket()
 
 
@@ -30,6 +32,18 @@ class InfoForm(FlaskForm):
     startdate = DateField('', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     enddate = DateField('-', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     submit = SubmitField('Generate CSV')
+
+
+sensors_data = sensors_ref.get()
+sensors_ids = list(sensors_data.keys())
+
+
+class editSensorForm(FlaskForm):
+    sensor = SelectField(u'Sensor ID', choices=sensors_ids, validate_choice=True)
+    image = FileField(u'Image [jpg]', [validators.regexp(r'.*\.jpg')])
+    location = StringField(u'Location')
+    description = TextAreaField(u'Description')
+    submit = SubmitField('Save')
 
 
 def updateDB():
@@ -53,9 +67,6 @@ def arrangeQueryDate(date):
     date_strings = date.split("-")
     date = [int(d) for d in date_strings]
     date[2] += 2000 # because we save it as 22 we need to add 2000
-    # month = date[0]
-    # date[0] = date[1]
-    # date[1] = month
     return date
 
 
@@ -195,6 +206,16 @@ def getStatus():
     # pass the list to the return
     # loop through it in the html with JINGA and update the active sensors
     return render_template("status.html", active_sensors=active_sensors)
+
+
+@app.route("/sensors",  methods=['GET','POST'])
+def getSensors():
+    # get the sensors data from the firebase
+    form = editSensorForm()
+    sensors_locations = [list(tmp_d.keys())[0] for tmp_d in list(sensors_data.values())]
+    sensors_descriptions = [list(tmp_d.values())[0] for tmp_d in list(sensors_data.values())]
+    return render_template("sensors.html", s_ids=sensors_ids, s_locations=sensors_locations, s_descriptions=sensors_descriptions,
+                            form=form)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=1234)

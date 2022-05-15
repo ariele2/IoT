@@ -15,8 +15,8 @@
 
 
 
-#define WIFI_SSID "Mor-yosef1"
-#define WIFI_PASSWORD "0506272252"
+#define WIFI_SSID "Saloon"
+#define WIFI_PASSWORD "0549755033"
 
 // Insert Firebase project API Key
 #define API_KEY "AIzaSyCuLvDQQROn9LRXuxdiRhzE1ZmHgk_Bv4E"
@@ -307,7 +307,7 @@ void loop() {
   // loop through the sensors and get distance data
   unsigned long pull_data_time = millis();
   Serial.println("[DEBUG] calculating how many times someone signaled as sit stage ");
-  while(pull_data_time + 1800 > millis()) { // get data from sensors in 2 seconds
+  while(pull_data_time + 10000 > millis()) { // get data from sensors in 2 seconds
     Serial.print("[DEBUG] millis: ");
     Serial.println(millis());
     Serial.print("[DEBUG] pull_data_time: ");
@@ -331,8 +331,7 @@ void loop() {
   if (Firebase.ready() && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)) {
     sendDataPrevMillis = millis();
     for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and update data 
-      vector<int> data_vec = it->second;
-      updateDB(it->first, data_vec);
+      updateDB(it->first, it->second);
       // reset the distance and total distance for new calculation
       it->second[2] = 0;
       it->second[3] = 0;
