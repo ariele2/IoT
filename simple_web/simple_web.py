@@ -215,24 +215,32 @@ def getSensors():
     # get the sensors data from the firebase
     form = editSensorForm()
     sensors_data = sensors_ref.get()
-    sensors_locations = [list(tmp_d.keys())[0] for tmp_d in list(sensors_data.values())]
-    sensors_descriptions = [list(tmp_d.values())[0] for tmp_d in list(sensors_data.values())]
+    sensors_locations = [tmp_d['location'] for tmp_d in list(sensors_data.values())]
+    sensors_descriptions = [tmp_d['description'] for tmp_d in list(sensors_data.values())]
+    sensor_image_prefixes = [tmp_d['image'] for tmp_d in list(sensors_data.values())]
     if form.validate_on_submit():
         sensor_id = form.sensor.data
+        sensor_image_prefix = sensors_data[sensor_id]['image']
         if form.image.data:
             uploaded_file = request.files[form.image.name]
             print(f"uploaded_file:  {uploaded_file}")
             uploaded_file.save('images/'+sensor_id + ".jpg")
-            blob = bucket.blob('images/'+sensor_id)
+            blob = bucket.blob('images/'+sensor_id+str(sensor_image_prefix)+'.jpg')
             with open('images/'+sensor_id + '.jpg', 'rb') as img:
-                blob.upload_from_file(img)
+                # blob.delete()
+                sensor_image_prefix += 1
+                blob = bucket.blob('images/'+sensor_id+'_'+str(sensor_image_prefix)+'.jpg')
+                print('images/'+sensor_id+'_'+str(sensor_image_prefix)+'.jpg')
+                blob.upload_from_file(img, content_type='image/jpeg')
                 blob.make_public()
             print(blob.public_url)
-        new_data = {form.sensor.data: {form.location.data:form.description.data}}
+        s_location = form.location.data if form.location.data else sensors_data[sensor_id]['location']
+        s_description = form.description.data if form.description.data else sensors_data[sensor_id]['description']
+        new_data = {sensor_id: {'location':s_location, 'description':s_description, 'image':sensor_image_prefix}}
         sensors_ref.update(new_data)
         return redirect('sensors')
     return render_template("sensors.html", s_ids=sensors_ids, s_locations=sensors_locations, s_descriptions=sensors_descriptions,
-                            form=form)
+                            sensor_image_prefixes=sensor_image_prefixes, form=form)
 
 
 # @app.route("/updateSensor")
