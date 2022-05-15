@@ -1,14 +1,16 @@
-from flask import Flask, redirect, url_for, render_template, session
+from flask import Flask, redirect, url_for, render_template, session, request
 from flask_wtf import FlaskForm
 from wtforms.fields import DateField, StringField, SelectField, TextAreaField, FileField
 from wtforms.validators import DataRequired
 from wtforms import validators, SubmitField
+from werkzeug.utils import secure_filename
 import firebase_admin
 from firebase_admin import db, credentials, initialize_app, storage
 import pandas as pd
 import datetime
 from io import StringIO
 import re
+import os
 
 
 app = Flask(__name__)
@@ -40,7 +42,7 @@ sensors_ids = list(sensors_data.keys())
 
 class editSensorForm(FlaskForm):
     sensor = SelectField(u'Sensor ID', choices=sensors_ids, validate_choice=True)
-    image = FileField(u'Image [jpg]', [validators.regexp(r'.*\.jpg')])
+    image = FileField(u'Image [jpg]')
     location = StringField(u'Location')
     description = TextAreaField(u'Description')
     submit = SubmitField('Save')
@@ -212,10 +214,33 @@ def getStatus():
 def getSensors():
     # get the sensors data from the firebase
     form = editSensorForm()
+    sensors_data = sensors_ref.get()
     sensors_locations = [list(tmp_d.keys())[0] for tmp_d in list(sensors_data.values())]
     sensors_descriptions = [list(tmp_d.values())[0] for tmp_d in list(sensors_data.values())]
+    if form.validate_on_submit():
+        sensor_id = form.sensor.data
+        if form.image.data:
+            uploaded_file = request.files[form.image.name]
+            print(f"uploaded_file:  {uploaded_file}")
+            uploaded_file.save('images/'+sensor_id + ".jpg")
+            blob = bucket.blob('images/'+sensor_id)
+            with open('images/'+sensor_id + '.jpg', 'rb') as img:
+                blob.upload_from_file(img)
+                blob.make_public()
+            print(blob.public_url)
+        new_data = {form.sensor.data: {form.location.data:form.description.data}}
+        sensors_ref.update(new_data)
+        return redirect('sensors')
     return render_template("sensors.html", s_ids=sensors_ids, s_locations=sensors_locations, s_descriptions=sensors_descriptions,
                             form=form)
+
+
+# @app.route("/updateSensor")
+# def updateSensor(s_id, s_location, s_description):
+#     print(f"s_id: {s_id}, s_location: {s_location}, s_description: {s_description}")
+#     new_data = {s_id: {s_location:s_description}}
+#     sensors_ref.update(new_data)
+#     return redirect(sensors)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=1234)
