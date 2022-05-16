@@ -74,7 +74,7 @@ def set_system_time():
     day = result_str[8:10]
     month = result_str[5:7]
     year = result_str[2:4]
-    times = datetime.strptime(result_str[11:], "%H:%M:%S")
+    times = datetime.datetime.strptime(result_str[11:], "%H:%M:%S")
     times += timedelta(hours=3)
     times = times.strftime("%H:%M:%S")
     os.system("sudo date -s \'" + year + "-" + month + "-" + day + " " + times + "\'") 
