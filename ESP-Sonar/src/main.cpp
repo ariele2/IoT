@@ -104,14 +104,14 @@ vector<string> getSensorsNames() {
       int sensor_pos = sensors_string.find_first_of(':');
       string sensor = sensors_string.substr(0,sensor_pos);
       removeCharsFromString(sensor, "{\"}");
-      Serial.print(sens_count);
-      Serial.print(" [DEBUG] sensor: ");
-      Serial.println(sensor.c_str());
       int next_sensor_pos = sensors_string.find_first_of(',');
       sensors_string = sensors_string.substr(next_sensor_pos+1);
       if (sensor[0] != 'S') {
         continue;
       }
+      Serial.print(sens_count);
+      Serial.print(" [DEBUG] sensor: ");
+      Serial.println(sensor.c_str());
       sensors_ids.push_back(sensor);
       sens_count++;
     }

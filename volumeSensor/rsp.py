@@ -1,12 +1,10 @@
 import firebase_admin
 from firebase_admin import db, credentials, initialize_app
-  
 import numpy as np
 import argparse
 import time
 import cv2
 import os
-
 import threading
 import queue
 import time
@@ -109,6 +107,7 @@ net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 # initialize camera
 (W,H) = (None, None)
 prev_time = 0
+action_ref = db.reference('/action')
 data_ref = db.reference('/data')
 real_data_ref = db.reference('/real_data')
 caller_ref = db.reference('data/call_id')
@@ -116,8 +115,10 @@ sensorID = "V-01"
 # make a while loop that works every 30 secs
 while(True):
 	curr_time = time.time()
-	# res, image = cam.read()
-	# cv2.imshow("Image", image)
+	# validate that the system is on
+	while action_ref.get() == 'off':
+		time.sleep(5)
+
 	if curr_time - prev_time > time_between_frame:
 		cam = cv2.VideoCapture(0)
 		res, image = cam.read()
