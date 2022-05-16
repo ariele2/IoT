@@ -248,10 +248,10 @@ void updateDB(string sensorID, vector<int> sensor_data) {
   string sitting = isSitting(sensor_data[2], sensor_data[3]);
   int call_id = 0;
   bool call_id_problem = false;
-  if (Firebase.ready() && Firebase.RTDB.getInt(&fbdo, "data/call_id/"+sensorID)) {
+  if (Firebase.ready() && Firebase.RTDB.getInt(&fbdo, "call_id/"+sensorID)) {
     call_id = fbdo.to<int>();
     if (call_id == 0) {
-      Firebase.RTDB.setInt(&fbdo, "data/call_id/"+sensorID, 1);
+      Firebase.RTDB.setInt(&fbdo, "call_id/"+sensorID, 1);
     }
   }
   else {
@@ -272,7 +272,7 @@ void updateDB(string sensorID, vector<int> sensor_data) {
   }
   bool update_real_data_res = Firebase.RTDB.updateNode(&fbdo, "real_data/"+sensorID, &real_data_set);
   bool update_data_res = Firebase.RTDB.updateNode(&fbdo, "data/"+curr_time+" "+sensorID, &data_set) && 
-                         Firebase.RTDB.setInt(&fbdo, "data/call_id/"+sensorID, call_id);
+                         Firebase.RTDB.setInt(&fbdo, "call_id/"+sensorID, call_id);
   if (update_data_res && update_real_data_res) {  // updates the firebase
     Serial.print("value: ");
     Serial.println(sitting.c_str());

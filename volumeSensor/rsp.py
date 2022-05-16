@@ -122,7 +122,7 @@ prev_time = 0
 action_ref = db.reference('/action')
 data_ref = db.reference('/data')
 real_data_ref = db.reference('/real_data')
-caller_ref = db.reference('data/call_id')
+caller_ref = db.reference('/call_id')
 sensorID = "V-01"
 # make a while loop that works every 30 secs
 while(True):
