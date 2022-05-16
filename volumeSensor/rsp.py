@@ -71,8 +71,7 @@ def get_current_time():
 cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path})
-ref_data = db.reference("/data/")
-ref_real_data = db.reference("/real_data/")
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image", required=False,
