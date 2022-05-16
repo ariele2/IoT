@@ -15,8 +15,8 @@
 
 
 
-#define WIFI_SSID "Saloon"
-#define WIFI_PASSWORD "0549755033"
+#define WIFI_SSID "TechPublic"
+#define WIFI_PASSWORD ""
 
 // Insert Firebase project API Key
 #define API_KEY "AIzaSyCuLvDQQROn9LRXuxdiRhzE1ZmHgk_Bv4E"
@@ -26,14 +26,18 @@
 
 #define TRIG_PIN1 23 // ESP32 pin GIOP23 connected to Ultrasonic Sensor's TRIG pin
 #define ECHO_PIN1 22 // ESP32 pin GIOP22 connected to Ultrasonic Sensor's ECHO pin
+//connected to these
 #define TRIG_PIN2 3
 #define ECHO_PIN2 2
-#define TRIG_PIN3 4
-#define ECHO_PIN3 5
-#define TRIG_PIN4 7
-#define ECHO_PIN4 8
-#define TRIG_PIN5 9
-#define ECHO_PIN5 10
+//conected to these
+#define TRIG_PIN3 18
+#define ECHO_PIN3 19
+//connected to these
+#define TRIG_PIN4 33 
+#define ECHO_PIN4 32 
+//connected to these
+#define TRIG_PIN5 26
+#define ECHO_PIN5 27
 
 
 #define ERROR_VEC_LEN 5 // error vec holds the last sitting events (yes/no/error)
