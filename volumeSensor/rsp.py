@@ -66,6 +66,18 @@ def get_current_time():
 	return to_ret
 
 
+def set_system_time():
+    # TODO: add exception if no wifi
+    res = urlopen('http://just-the-time.appspot.com/')
+    result = res.read().strip()
+    result_str = result.decode('utf-8')
+    day = result_str[8:10]
+    month = result_str[5:7]
+    year = result_str[2:4]
+    times = datetime.strptime(result_str[11:], "%H:%M:%S")
+    times += timedelta(hours=3)
+    times = times.strftime("%H:%M:%S")
+    os.system("sudo date -s \'" + year + "-" + month + "-" + day + " " + times + "\'") 
 
 
 cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
@@ -104,6 +116,7 @@ if debug_Mode:
 net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
 # initialize camera
+set_system_time()
 (W,H) = (None, None)
 prev_time = 0
 action_ref = db.reference('/action')
