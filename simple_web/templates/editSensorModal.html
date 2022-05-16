@@ -1,0 +1,43 @@
+<div class="modal fade" id="editSensorModal" tabindex="-1" aria-labelledby="editSensorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editSensorModalLabel">Edit Sensor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="" method='POST' name="my-form" enctype="multipart/form-data">
+                <div class="modal-body">
+                    {{ form.csrt_token }}
+                    <div class="row mb-2">
+                        <label for="sensor-id" class="col-sm-3 col-form-label">{{form.sensor.label}}</label>
+                        <div class="col-sm-9">
+                            {{form.sensor(class_='edit-sensor form-control-md form-select', id='sensor-id')}} {{form.hidden_tag()}}
+                        </div>
+                    </div>  
+                    <div class="row mb-2">
+                        <label for="sensor-image" class="col-sm-3 col-form-label">{{form.image.label}}</label>
+                        <div class="col-sm-9">
+                            {{form.image(class_='edit-sensor form-control form-control-md form-file', id='sensor-image')}} {{form.hidden_tag()}}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <label for="sensor-location" class="col-sm-3 col-form-label">{{form.location.label}}</label>
+                        <div class="col-sm-9">
+                            {{form.location(class_='edit-sensor form-control form-control-md', id='sensor-location')}} {{form.hidden_tag()}}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <label for="sensor-description" class="col-sm-3 col-form-label">{{form.description.label}}</label>
+                        <div class="col-sm-9">
+                            {{form.description(class_='edit-sensor form-control form-control-md', id='sensor-description')}} {{form.hidden_tag()}}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    {{form.submit(class_="btn btn-primary btn-sm saveEditSensor")}}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
