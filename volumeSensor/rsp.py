@@ -116,8 +116,10 @@ sensorID = "V-01"
 while(True):
 	curr_time = time.time()
 	# validate that the system is on
-	while action_ref.get() == 'off':
+	action_data = action_ref.get()
+	while action_data == 'off':
 		time.sleep(5)
+		action_data = action_ref.get()
 
 	if curr_time - prev_time > time_between_frame:
 		cam = cv2.VideoCapture(0)
