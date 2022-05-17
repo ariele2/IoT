@@ -103,31 +103,31 @@ vector<string> getSensorsNames(string which) {
   if (which.compare("all") == 0) {
     sen_to_find = true;
   }
-  else if (which.compare("S1-5") == 0) {
-    sen_to_find = sens_count < 5;
-  }
-  else if (which.compare("S6-10") == 0) {
-    sen_to_find = sens_count > 5 && sens_count < 10;
-  }
   if (Firebase.RTDB.getString(&fbdo, "sensors/")) {
     int sens_count = 0;
     string sensors_string = fbdo.to<string>();
     Serial.print("sensors_string: ");
     Serial.println(sensors_string.c_str());
     int next_sensor_pos = 0;
-    while (next_sensor_pos != string::npos) {
+    while (sensors_string.length() > 0) {
+      if (which.compare("S1-5") == 0) {
+        sen_to_find = sens_count < 5;
+      }
+      else if (which.compare("S6-10") == 0) {
+        sen_to_find = sens_count > 5 && sens_count < 10;
+      }
       int sensor_pos = sensors_string.find_first_of(':');
       string sensor = sensors_string.substr(0,sensor_pos);
-      removeCharsFromString(sensor, "{\"}");
-      int next_sensor_pos = sensors_string.find_first_of(',');
+      removeCharsFromString(sensor, "{\"},");
+      int next_sensor_pos = sensors_string.find_first_of('}');
       sensors_string = sensors_string.substr(next_sensor_pos+1);
-      if (sensor[0] != 'S' and which.compare("all") != 0) {
+      if (sensor[0] != 'S' && which.compare("all") != 0) {
         continue;
       }
       Serial.print(sens_count);
       Serial.print(" [DEBUG] sensor: ");
       Serial.println(sensor.c_str());
-      if (sen_to_find) {
+      if (sen_to_find && sensor.length() > 0) {
         sensors_ids.push_back(sensor);
       }
       sens_count++;
