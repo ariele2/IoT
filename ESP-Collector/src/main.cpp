@@ -60,9 +60,54 @@ void connect2Firebase() {
   Firebase.reconnectWiFi(true);
 }
 
+vector<string> getSensorsNames(string which) {
+  vector<string> sensors_ids;
+  bool sen_to_find;
+  int sens_count = 0;
+  if (which.compare("all") == 0) {
+    sen_to_find = true;
+  }
+  else if (which.compare("S1-5") == 0) {
+    sen_to_find = sens_count < 5;
+  }
+  else if (which.compare("S6-10") == 0) {
+    sen_to_find = sens_count > 5 && sens_count < 10;
+  }
+  if (Firebase.RTDB.getString(&fbdo, "sensors/")) {
+    int sens_count = 0;
+    string sensors_string = fbdo.to<string>();
+    Serial.print("sensors_string: ");
+    Serial.println(sensors_string.c_str());
+    int next_sensor_pos = 0;
+    while (next_sensor_pos != string::npos) {
+      int sensor_pos = sensors_string.find_first_of(':');
+      string sensor = sensors_string.substr(0,sensor_pos);
+      removeCharsFromString(sensor, "{\"}");
+      int next_sensor_pos = sensors_string.find_first_of(',');
+      sensors_string = sensors_string.substr(next_sensor_pos+1);
+      if (sensor[0] != 'S' and which.compare("all") != 0) {
+        continue;
+      }
+      Serial.print(sens_count);
+      Serial.print(" [DEBUG] sensor: ");
+      Serial.println(sensor.c_str());
+      if (sen_to_find) {
+        sensors_ids.push_back(sensor);
+      }
+      sens_count++;
+    }
+  }
+  else {
+    Serial.println("FAILED");
+    Serial.println("REASON: " + fbdo.errorReason());
+  }
+  return sensors_ids;
+}
+
+vector<string> sensors_names = getSensorsNames("all");
+
 // S - Sonar, D - Door, V - Volume
-std::map<string, string> sensors_map = {{"S-01", "0"}, {"S-02", "0"}, {"S-03", "0"}, {"S-04", "0"}, {"S-05", "0"}, {"S-06","0"}, 
-                                        {"S-07", "0"}, {"S-08","0"}, {"S-09", "0"}, {"S-10", "0"}, {"D-01", "0"},  {"V-01", "0"}};
+std::map<string, string> sensors_map;
 
 void setup() {
   Serial.begin(9600);
@@ -73,6 +118,13 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
+
+  for (auto it = sensors_names.begin(); it != sensors_names.end(); it++) {
+    Serial.print("Inserted: ");
+    Serial.print(it.c_str());
+    Serial.println(" to sensors_map");
+    sensors_map[it] = "0";
+  }
 
 }
 
@@ -116,7 +168,6 @@ void loop() {
   if (Firebase.ready() && signupOK && (millis() - recvDataPrevMillis > 20000 || recvDataPrevMillis == 0)) {
     
     recvDataPrevMillis = millis();
-    // update the error_vector
    
     if (Firebase.RTDB.getString(&fbdo, "real_data/")){  // reads real_date from the firebase
       string ret_data = fbdo.to<string>();

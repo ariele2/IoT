@@ -103,10 +103,10 @@ vector<string> getSensorsNames(string which) {
   if (which.compare("all") == 0) {
     sen_to_find = true;
   }
-  else if (which.compare("first_S") == 0) {
+  else if (which.compare("S1-5") == 0) {
     sen_to_find = sens_count < 5;
   }
-  else if (which.compare("second_S") == 0) {
+  else if (which.compare("S6-10") == 0) {
     sen_to_find = sens_count > 5 && sens_count < 10;
   }
   if (Firebase.RTDB.getString(&fbdo, "sensors/")) {
@@ -121,7 +121,7 @@ vector<string> getSensorsNames(string which) {
       removeCharsFromString(sensor, "{\"}");
       int next_sensor_pos = sensors_string.find_first_of(',');
       sensors_string = sensors_string.substr(next_sensor_pos+1);
-      if (sensor[0] != 'S') {
+      if (sensor[0] != 'S' and which.compare("all") != 0) {
         continue;
       }
       Serial.print(sens_count);
@@ -163,7 +163,7 @@ void setup() {
   // connect to firebase
   connect2Firebase();
 
-  vector<string> sensors_ids = getSensorsNames();
+  vector<string> sensors_ids = getSensorsNames("S1-5");
 
   // {sensorID:{TRIG_PIN,ECHO_PIN,counter,total distance}
   vector<int> vec_s01 = {TRIG_PIN1, ECHO_PIN1, 0, 0};
