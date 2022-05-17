@@ -60,6 +60,14 @@ void connect2Firebase() {
   Firebase.reconnectWiFi(true);
 }
 
+
+void removeCharsFromString(string &str, char* charsToRemove) {
+   for ( unsigned int i = 0; i < strlen(charsToRemove); ++i ) {
+      str.erase( remove(str.begin(), str.end(), charsToRemove[i]), str.end() );
+   }
+}
+
+
 vector<string> getSensorsNames(string which) {
   vector<string> sensors_ids;
   bool sen_to_find;
@@ -119,20 +127,12 @@ void setup() {
   // connect to firebase
   connect2Firebase();
 
-  for (auto it = sensors_names.begin(); it != sensors_names.end(); it++) {
+  for (int i = 0; i < sensors_names.size(); i++) {
     Serial.print("Inserted: ");
-    Serial.print(it.c_str());
+    Serial.print(sensors_names[i].c_str());
     Serial.println(" to sensors_map");
-    sensors_map[it] = "0";
+    sensors_map[sensors_names[i]] = "0";
   }
-
-}
-
-
-void removeCharsFromString(string &str, char* charsToRemove) {
-   for ( unsigned int i = 0; i < strlen(charsToRemove); ++i ) {
-      str.erase( remove(str.begin(), str.end(), charsToRemove[i]), str.end() );
-   }
 }
 
 
