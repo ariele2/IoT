@@ -23,7 +23,7 @@ clock = time.clock()
 debuge_mode = True
 
 #initialize uart
-uart = UART(3, 9600, timeout_char=1000) # send data from port 3
+uart = UART(1, 9600, timeout_char=1000)
 uart.init(9600, bits=8, parity=None, stop=1, timeout_char=1000)
 
 extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
@@ -70,7 +70,7 @@ while(True):
     for i in range(len(captured_frames_cx)):
         # we want to ignore noisy capturing, we set the noise to 7
         if i < len(captured_frames_cx) - 1 and \
-                abs(captured_frames_cx[i+1]-captured_frames_cx[i])<MAX_FRAM_DIST:
+                abs(captured_frames_cx[i+1]-captured_frames_cx[i])<MAX_FRAME_DIST:
             dist_frames.append(captured_frames_cx[i+1]-captured_frames_cx[i])
     if len(dist_frames)>= 3:    # need at least 3 elements in the array of frames to be relaiable
         if debuge_mode:
@@ -78,11 +78,13 @@ while(True):
             print("calculated: ", dist_frames, "; sum = ", sum(dist_frames))
         if sum(dist_frames) >= MOVEMENT_LIMIT:
             print("Someone entered!")
+            uart.write("out")
             counter -= 1
         elif sum(dist_frames) <= -MOVEMENT_LIMIT:
             print("Someone exited!")
+            uart.write("in")
             counter += 1
-    sensor.skip_frames(time = 1000)
+    sensor.skip_frames(time = 1050)
 
     print("Currently inside: ", counter)
     if debuge_mode:

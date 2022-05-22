@@ -192,19 +192,16 @@ unsigned long recvDataPrevMillis = 0;
 
 void loop() {
   checkAction();
-  bool recieved_data = true;
-  Serial.println("Recieved: ");
-  Serial.println(Serial2.readString());
-  char buf[50];
-  Serial2.readString().toCharArray(buf, 50);
-  string res = buf;
-  if (res.compare("in") != 0 and res.compare("out") != 0 ) {
-    Serial.print("[DEBUG] received unfamiliar data: ");
-    Serial.println(buf);
-    recieved_data = false;
-  }
-  if (Firebase.ready() && signupOK && (millis() - recvDataPrevMillis > 20000 || recvDataPrevMillis == 0) && recieved_data) {
-    recvDataPrevMillis = millis();  
-    updateDB(res);
+  if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
+    recvDataPrevMillis = millis(); 
+    Serial.print("Recieved: ");
+    Serial.println(Serial2.readString());
+    char buf[50];
+    Serial2.readString().toCharArray(buf, 50);
+    string res = buf;
+    bool recieved_data = res.compare("in") != 0 && res.compare("out") != 0;
+    if (Firebase.ready() && signupOK && recieved_data) {  
+      updateDB(res);
+    }
   }
 }
