@@ -231,6 +231,7 @@ while(True):
 		time_str = get_current_time()  
 		print("time_str: ", time_str)
 		call_id = caller_ref.get()[sensorID]
+		print(f"call_id: {call_id}")
 		insert_data = {time_str + " " + sensorID: {"value":str(num_of_pepole), "callID":str(call_id)}}
 		insert_real_data = {sensorID:{"value":str(num_of_pepole), "callID":str(call_id), "time":time_str}}
 		data_ref.update(insert_data) 
