@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 align="center" class="mt-3 mb-5"> Scheduler </h1>
+<!--- should loop here on the items in the database and show them in the table --->
+<div class="continer-md-75">
+    <table class="table align-middle">
+        <thead>
+          <tr class="table-dark">
+            <th scope="col">#</th>
+            <th scope="col">Start date</th>
+            <th scope="col">End date</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in scheduler_data %}
+          <tr>
+            <th scope="row">{{loop.index}}</th>
+            <td>{{item[1]}}</td>
+            <td>{{item[2]}}</td>
+            <td> <a class="btn btn-sm btn-primary-outline" type="button" href="/deleteSchedule?id={{item[0]}}" role="button"> <i class="bi bi-trash"></i> </a> </td>
+          </tr>
+          {% endfor %}
+          <tr class="collapse" id="collapseAdd">
+            <form class="form-inline" action="" method='POST' name="myform">
+                {{ form.csrt_token }}
+                <td></td>
+                <div class="input-group">
+                  <td id="datetimepicker1" data-td-target-input='nearest' data-td-target-toggle='nearest'>
+                    <span data-td-target='#datetimepicker1' data-td-toggle='datetimepicker'>
+                    {{form.startdate(class_='form-control schedulePicker', id='datetimepicker1Input', type='text', **{'data-td-target':'#datetimepicker1'})}}
+                      <i class="bi bi-calendar"></i>
+                    </span>
+                    {{form.hidden_tag()}}
+                  </td>
+                  <td id="datetimepicker2" data-td-target-input='nearest' data-td-target-toggle='nearest'>
+                    <span data-td-target='#datetimepicker1' data-td-toggle='datetimepicker'>
+                      {{form.enddate(class_='form-control schedulePicker', id='datetimepicker2Input', type='text', **{'data-td-target':'#datetimepicker2'})}} 
+                      <i class="bi bi-calendar" data-td-target='#datetimepicker2' data-td-toggle='datetimepicker'></i>
+                    </span>
+                    {{form.hidden_tag()}}
+                  </td>
+                </div>
+                <td>
+                  {{form.submit(class_="btn btn-sm btn-dark", id="addScheduleBtn")}}
+                </td>
+            </form>
+          </tr>
+        </tbody>
+      </table>
+      <!-- <form class="row g-3 collapse" id="collapseAdd" action="" method='POST' name="myform">
+        {{ form.csrt_token }}
+        <div class="col-xs-12 col-md-4 input-group" id="datetimepicker1" data-td-target-input='nearest' data-td-target-toggle='nearest'>
+            {{form.startdate(class_='form-control schedulePicker', id='datetimepicker1Input', type='text', **{'data-td-target':'#datetimepicker1'})}}
+            <span class='input-group-text' data-td-target='#datetimepicker1' data-td-toggle='datetimepicker'>
+                  <i class="bi bi-calendar"></i>
+            </span>
+            {{form.hidden_tag()}}
+        </div>
+        <div class='col-xs-2 col-md-1'>
+            <span id="dateSeperator2"> - </span> 
+        </div>
+        <div class="col-xs-12 col-md-4 input-group" id="datetimepicker2" data-td-target-input='nearest' data-td-target-toggle='nearest'>
+            {{form.enddate(class_='form-control schedulePicker', id='datetimepicker2Input', type='text', **{'data-td-target':'#datetimepicker2'})}} 
+            <span class='input-group-text' data-td-target='#datetimepicker2' data-td-toggle='datetimepicker'>
+              <i class="bi bi-calendar"></i>
+            </span>
+            {{form.hidden_tag()}}
+          </div>
+        <div class="col-xs-12 col-md-3">
+            {{form.submit(class_="btn btn-sm btn-dark", id="addScheduleBtn")}}
+        </div>
+      </form> -->
+      <div class="row justify-content-md-left mt-2">
+        <a class="btn btn-sm btn-primary-outline" type="button" data-bs-toggle="collapse" href="#collapseAdd" role="button" aria-expanded="false" aria-controls="collapseAdd">
+            <i class="bi bi-plus-circle"></i>
+        </a>
+      </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+    new tempusDominus.TempusDominus(document.getElementById('datetimepicker1'));
+    new tempusDominus.TempusDominus(document.getElementById('datetimepicker2'));
+</script>
+{% endblock %}

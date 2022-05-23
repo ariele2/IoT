@@ -1,6 +1,6 @@
 from flask import Flask, redirect, url_for, render_template, session, request
 from flask_wtf import FlaskForm
-from wtforms.fields import DateField, StringField, SelectField, TextAreaField, FileField
+from wtforms.fields import DateField, StringField, SelectField, TextAreaField, FileField, DateTimeField
 from wtforms.validators import DataRequired
 from wtforms import validators, SubmitField
 from werkzeug.utils import secure_filename
@@ -27,6 +27,7 @@ action_ref = db.reference("/action")
 data_ref = db.reference("/data")
 real_data_ref = db.reference("/real_data")
 sensors_ref = db.reference("/sensors")
+scheduler_ref = db.reference("/scheduler")
 bucket = storage.bucket()
 
 
@@ -46,6 +47,12 @@ class editSensorForm(FlaskForm):
     location = StringField(u'Location')
     description = TextAreaField(u'Description')
     submit = SubmitField('Save')
+
+
+class SchedulerForm(FlaskForm):
+    startdate = DateTimeField('', format='%d-%m-%y %H:%M:%S', validators=(validators.DataRequired(),))
+    enddate = DateTimeField('-', format='%d-%m-%y %H:%M:%S', validators=(validators.DataRequired(),))
+    submit = SubmitField('Add')
 
 
 def updateDB():
@@ -243,12 +250,34 @@ def getSensors():
                             sensor_image_prefixes=sensor_image_prefixes, form=form)
 
 
-# @app.route("/updateSensor")
-# def updateSensor(s_id, s_location, s_description):
-#     print(f"s_id: {s_id}, s_location: {s_location}, s_description: {s_description}")
-#     new_data = {s_id: {s_location:s_description}}
-#     sensors_ref.update(new_data)
-#     return redirect(sensors)
+@app.route("/scheduler", methods=['GET','POST'])
+def scheduler():
+    form = SchedulerForm()
+    scheduler_data = scheduler_ref.get()
+    parsed_data = []
+    for i in range(len(scheduler_data)):
+        if scheduler_data[i]:
+            for s,e in scheduler_data[i].items():
+                parsed_data.append((i, s, e))
+    res = session['res'] if 'res' in session else ''
+    if res == 'Please enter a valid date range':
+        session.pop('res')
+        res = 'Please enter a valid date range'
+    if form.validate_on_submit():
+        # validate date is ok within the scheduler_data
+        session['startdate'] = form.startdate.data
+        session['enddate'] = form.enddate.data
+        return redirect('generateCSV')
+    return render_template("scheduler.html", scheduler_data=parsed_data, form=form, res=res)
+
+
+@app.route("/deleteSchedule")
+def deleteSchedule():
+    schedule_id = request.args.get('id')
+    schedule_to_delete = db.reference(f'scheduler/{schedule_id}')
+    schedule_to_delete.delete()
+    return redirect('scheduler')
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=1234)

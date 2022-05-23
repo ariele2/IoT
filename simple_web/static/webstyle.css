@@ -28,11 +28,11 @@ h1 {
     margin-top: 5%;
 }
 
-.form-control {
+.datepicker {
+    padding: 5% 5% !important; 
     width: 100% !important;
     height: 100% !important;
     font-size: 18px !important;
-    padding: 5% 5% !important; 
     text-align: center;
 }
 
@@ -84,3 +84,27 @@ h1 {
     height: 20vw;
     object-fit: cover;
 }
+
+i {
+    font-size: 80%;
+}
+
+.bi-calendar {
+    font-size: 110%;
+}
+
+.bi-plus-circle {
+    font-size: 150%;
+    position: relative;
+}
+
+#addScheduleBtn {
+    font-size: 140% !important;
+}
+
+.schedulePicker {
+    width: 75% !important;
+    display: inline !important;
+}
+
+
