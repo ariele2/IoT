@@ -50,8 +50,8 @@ class editSensorForm(FlaskForm):
 
 
 class SchedulerForm(FlaskForm):
-    startdate = DateTimeField('', format='%d-%m-%y %H:%M:%S', validators=(validators.DataRequired(),))
-    enddate = DateTimeField('-', format='%d-%m-%y %H:%M:%S', validators=(validators.DataRequired(),))
+    startdate = StringField('', validators=(validators.DataRequired(),))
+    enddate = StringField('', validators=(validators.DataRequired(),))
     submit = SubmitField('Add')
 
 
@@ -189,6 +189,7 @@ def generate_csv():
         session['res'] = res
         return redirect(url_for("home", res=res))
 
+
 @app.route("/status")
 def getStatus():
     # make a dict of all of the sensors (for now hard coded list) as keys, val initialized to 0
@@ -260,14 +261,16 @@ def scheduler():
             for s,e in scheduler_data[i].items():
                 parsed_data.append((i, s, e))
     res = session['res'] if 'res' in session else ''
-    if res == 'Please enter a valid date range':
+    if res:
         session.pop('res')
-        res = 'Please enter a valid date range'
+    print(f"validate_on_submit: {form.validate_on_submit()}")
+    print(f"startdate: {form.startdate.data}, enddate: {form.enddate.data}")
     if form.validate_on_submit():
         # validate date is ok within the scheduler_data
         session['startdate'] = form.startdate.data
         session['enddate'] = form.enddate.data
-        return redirect('generateCSV')
+        print(f"startdate: {form.startdate.data}, enddate: {form.enddate.data}")
+        return redirect('addSchedule')
     return render_template("scheduler.html", scheduler_data=parsed_data, form=form, res=res)
 
 
@@ -277,6 +280,21 @@ def deleteSchedule():
     schedule_to_delete = db.reference(f'scheduler/{schedule_id}')
     schedule_to_delete.delete()
     return redirect('scheduler')
+
+
+@app.route("/addSchedule")
+def addSchedule():
+    startdate = session['startdate']
+    enddate = session['enddate']
+    # res = generateCSV(startdate, enddate)
+    # if res == "ERROR":
+    #     session['res'] = 'Please enter a valid date range'
+    #     return redirect(url_for("home", res='Please enter a valid date range'))
+    # else:
+    #     session['res'] = res
+    #     return redirect(url_for("scheduler", res=res))
+    print(f"startdate: {startdate}, enddate: {enddate}")
+    return redirect(url_for("scheduler"))
 
 
 if __name__ == "__main__":

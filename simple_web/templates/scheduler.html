@@ -30,49 +30,29 @@
                 <div class="input-group">
                   <td id="datetimepicker1" data-td-target-input='nearest' data-td-target-toggle='nearest'>
                     <span data-td-target='#datetimepicker1' data-td-toggle='datetimepicker'>
-                    {{form.startdate(class_='form-control schedulePicker', id='datetimepicker1Input', type='text', **{'data-td-target':'#datetimepicker1'})}}
+                      {{form.startdate(class_='form-control schedulePicker', id='datetimepicker1Input', type='text', **{'data-td-target':'#datetimepicker1'})}} {{form.hidden_tag()}}
                       <i class="bi bi-calendar"></i>
                     </span>
-                    {{form.hidden_tag()}}
-                  </td>
-                  <td id="datetimepicker2" data-td-target-input='nearest' data-td-target-toggle='nearest'>
-                    <span data-td-target='#datetimepicker1' data-td-toggle='datetimepicker'>
-                      {{form.enddate(class_='form-control schedulePicker', id='datetimepicker2Input', type='text', **{'data-td-target':'#datetimepicker2'})}} 
-                      <i class="bi bi-calendar" data-td-target='#datetimepicker2' data-td-toggle='datetimepicker'></i>
-                    </span>
-                    {{form.hidden_tag()}}
                   </td>
                 </div>
+                <div class="input-group">
+                  <td id="datetimepicker2" data-td-target-input='nearest' data-td-target-toggle='nearest'>
+                    <span data-td-target='#datetimepicker2' data-td-toggle='datetimepicker'>
+                      {{form.enddate(class_='form-control schedulePicker', id='datetimepicker2Input', type='text', **{'data-td-target':'#datetimepicker2'})}} {{form.hidden_tag()}}
+                      <i class="bi bi-calendar"></i>
+                    </span>
+                  </td>
+                </div>
+                {% if form.errors %}
+                  {{ form.errors }}
+                {% endif %}
                 <td>
-                  {{form.submit(class_="btn btn-sm btn-dark", id="addScheduleBtn")}}
+                  {{form.submit(class_="btn btn-sm btn-dark", id="addScheduleBtn")}} {{form.hidden_tag()}}
                 </td>
             </form>
           </tr>
         </tbody>
       </table>
-      <!-- <form class="row g-3 collapse" id="collapseAdd" action="" method='POST' name="myform">
-        {{ form.csrt_token }}
-        <div class="col-xs-12 col-md-4 input-group" id="datetimepicker1" data-td-target-input='nearest' data-td-target-toggle='nearest'>
-            {{form.startdate(class_='form-control schedulePicker', id='datetimepicker1Input', type='text', **{'data-td-target':'#datetimepicker1'})}}
-            <span class='input-group-text' data-td-target='#datetimepicker1' data-td-toggle='datetimepicker'>
-                  <i class="bi bi-calendar"></i>
-            </span>
-            {{form.hidden_tag()}}
-        </div>
-        <div class='col-xs-2 col-md-1'>
-            <span id="dateSeperator2"> - </span> 
-        </div>
-        <div class="col-xs-12 col-md-4 input-group" id="datetimepicker2" data-td-target-input='nearest' data-td-target-toggle='nearest'>
-            {{form.enddate(class_='form-control schedulePicker', id='datetimepicker2Input', type='text', **{'data-td-target':'#datetimepicker2'})}} 
-            <span class='input-group-text' data-td-target='#datetimepicker2' data-td-toggle='datetimepicker'>
-              <i class="bi bi-calendar"></i>
-            </span>
-            {{form.hidden_tag()}}
-          </div>
-        <div class="col-xs-12 col-md-3">
-            {{form.submit(class_="btn btn-sm btn-dark", id="addScheduleBtn")}}
-        </div>
-      </form> -->
       <div class="row justify-content-md-left mt-2">
         <a class="btn btn-sm btn-primary-outline" type="button" data-bs-toggle="collapse" href="#collapseAdd" role="button" aria-expanded="false" aria-controls="collapseAdd">
             <i class="bi bi-plus-circle"></i>
@@ -84,7 +64,23 @@
 
 {% block script %}
 <script>
-    new tempusDominus.TempusDominus(document.getElementById('datetimepicker1'));
-    new tempusDominus.TempusDominus(document.getElementById('datetimepicker2'));
+    const td1 = new tempusDominus.TempusDominus(document.getElementById('datetimepicker1'), {
+      "display":{
+        "components":{
+          "useTwentyfourHour":true, 
+          "seconds":true
+        }
+      }
+    });
+    td1.dates.formatInput = function(date) { {return moment(date).format('DD-MM-YY HH:mm:ss') } }
+    const td2 = new tempusDominus.TempusDominus(document.getElementById('datetimepicker2'), {
+      "display":{
+        "components":{
+          "useTwentyfourHour":true, 
+          "seconds":true
+        }
+      }
+    });
+    td2.dates.formatInput = function(date) { {return moment(date).format('DD-MM-YY HH:mm:ss') } }
 </script>
 {% endblock %}
