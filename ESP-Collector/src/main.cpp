@@ -163,11 +163,36 @@ vector<string> getSensorNameTime(string &ret_data) {
 }
 
 
+// Continue this code
+void checkScheduler() {
+  if (Firebase.RTDB.getArray(&fbdo, "scheduler/")) {
+    FirebaseJsonArray *scheduler_data_json = fbdo.to<FirebaseJsonArray *>()
+    Serial.println(scheduler_data_json->raw());
+    
+  }
+}
+
+
+void checkAction() {
+  if (Firebase.RTDB.getString(&fbdo, "action/")) {
+    string action = fbdo.to<string>();
+    Serial.print("[DEBUG] action: ");
+    Serial.println(action.c_str());
+    while (action.compare("off")==0) {
+      Firebase.RTDB.getString(&fbdo, "action/");
+      action = fbdo.to<string>();
+      Serial.println("System is off!");
+      vTaskDelay(5000);
+    }
+  }
+}
+
+
 unsigned long recvDataPrevMillis = 0;
 
 void loop() {
   if (Firebase.ready() && signupOK && (millis() - recvDataPrevMillis > 20000 || recvDataPrevMillis == 0)) {
-    
+    checkAction();
     recvDataPrevMillis = millis();
    
     if (Firebase.RTDB.getString(&fbdo, "real_data/")){  // reads real_date from the firebase

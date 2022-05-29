@@ -59,15 +59,10 @@ def get_current_time():
 	hour += datetime.timedelta(hours=3)
 	hour = hour.strftime("%H:%M:%S")
 	to_ret = day + "-" + month + "-" + year + " " + hour
-	# c = ntplib.NTPClient()
-	# response = c.request('il.pool.ntp.org', version=3)
-	# ntp_time = response.tx_time
-	# return datetime.datetime.fromtimestamp(ntp_time ).strftime('%d-%m-%y %H:%M:%S') 
 	return to_ret
 
 
 def set_system_time():
-    # TODO: add exception if no wifi
     res = urlopen('http://just-the-time.appspot.com/')
     result = res.read().strip()
     result_str = result.decode('utf-8')
