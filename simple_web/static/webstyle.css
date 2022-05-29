@@ -41,7 +41,6 @@ h1 {
 }
 
 .alert-text {
-    padding-left: 30%;
     font-size: 22px;
 }
 
@@ -107,4 +106,7 @@ i {
     display: inline !important;
 }
 
+.d-flex {
+    justify-content: center;
+}
 

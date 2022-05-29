@@ -6,6 +6,7 @@ from wtforms import validators, SubmitField
 from werkzeug.utils import secure_filename
 import firebase_admin
 from firebase_admin import db, credentials, initialize_app, storage
+from urllib.request import urlopen
 import pandas as pd
 import datetime
 from io import StringIO
@@ -64,64 +65,15 @@ def updateDB():
     return "off"
 
 
-def date2num(date):
-    list_date = date.split(' ')
-    day = int(list_date[1])
-    month = datetime.datetime.strptime(list_date[2], "%b").month
-    year = int(list_date[3])
-    return [day,month,year]
-
-
-def arrangeQueryDate(date):
-    date_strings = date.split("-")
-    date = [int(d) for d in date_strings]
-    date[2] += 2000 # because we save it as 22 we need to add 2000
-    return date
-
-
-def validateDates(start_date, end_date):
-    if end_date[2] - start_date[2] < 0:     # end year is smaller then start year
-        return False
-    elif end_date[2] - start_date[2] > 0:
-        return True
-    else:   # the same year
-        if end_date[1] - start_date[1] < 0:
-            return False
-        elif end_date[1] - start_date[1] > 0:
-            return True
-        else:   # the same month
-            if end_date[0] - start_date[0] < 0:
-                return False
-            else:   # the same day or greater
-                return True
-    return False    # shouldn't reach here
-
-
-def inRange(date, start_date, end_date):
-    # print("[DEBUG] date: ", date, ", start_date: ", start_date, ", end_date: ", end_date)
-    if date[2] > end_date[2] or date[2] < start_date[2]:    # data's year is not in the range 
-        return False
-    # same year for start, end and date, so need to check months, otherwise it means there is a legal year differential
-    elif date[2] == end_date[2] and date[2] == start_date[2]:   
-        if date[1] > end_date[1] or date[1] < start_date[1]:
-            return False
-        # same month for start, end and date, so need to check days, otherwise it means there is a legal month differntial.
-        elif date[1] == end_date[1] and date[1] == start_date[1]:  
-            if date[0] > end_date[0] or date[0] < start_date[0]:
-                return False
-    # if reached here, the date we found is good to go inside the .csv file!
-    return True 
-
-
-def generateCSV(start_date, end_date):
+def generateCSVAux(start_date, end_date):
     # create the columns titles
     columns_titles = ["sensorID", "Type", "Event", "Time", "Day"]
     df = pd.DataFrame(columns=columns_titles)
     # transfer date value to readable integers
-    start_date = date2num(start_date)
-    end_date = date2num(end_date)
+    start_date = datetime.datetime.strptime(start_date[:16], "%a, %d %b %Y")
+    end_date = datetime.datetime.strptime(end_date[:16], "%a, %d %b %Y")
     # validate the dates
-    if not validateDates(start_date, end_date):
+    if start_date > end_date:
         return "ERROR"
     # query the dates and arrange in the dataframe
     data = data_ref.get()
@@ -132,18 +84,17 @@ def generateCSV(start_date, end_date):
                 continue
             key_arr = key.split(" ")
             date, time, sensor_id = key_arr
-            date = arrangeQueryDate(date)
-            print("[DEBUG] date: ", date)
-            if not inRange(date, start_date, end_date):
+            date = datetime.datetime.strptime(date, "%d-%m-%y")
+            if date < start_date or date > end_date:
                 continue
             event = val['value']
-            day = str(date[0]) + '/' + str(date[1]) + '/' + str(date[2])
-            
+            day = date.strftime("%d/%m/%y")
+            print("[DEBUG] day: ", day)
             # print("[DEBUG] sensor_id: ", sensor_id, ", event: ", event, "time: ", time, ", day: ", day)
             df.loc[len(df.index)] = [sensor_id, "-", event, time, day]
     # create the csv file
-    start_date_str = str(start_date[0]) + '_' + str(start_date[1]) + '_' + str(start_date[2])
-    end_date_str = str(end_date[0]) + '_' + str(end_date[1]) + '_' + str(end_date[2])
+    start_date_str = start_date.strftime("%d_%m_%y")
+    end_date_str = end_date.strftime("%d_%m_%y")
     new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".csv"
     df.to_csv(new_csv_filename, index=False)
     # upload the file to the storage
@@ -153,6 +104,46 @@ def generateCSV(start_date, end_date):
     blob.make_public()
     # generate a download url and return it
     return blob.public_url
+
+
+def getCurrentTime():
+	res = urlopen('http://just-the-time.appspot.com/')
+	result = res.read().strip()
+	result_str = result.decode('utf-8')
+	day = result_str[8:10]
+	month = result_str[5:7]
+	year = result_str[2:4]
+	hour = datetime.datetime.strptime(result_str[11:], "%H:%M:%S")
+	hour += datetime.timedelta(hours=3)
+	hour = hour.strftime("%H:%M:%S")
+	to_ret = datetime.datetime.strptime(day + "-" + month + "-" + year + " " + hour, "%d-%m-%y %H:%M:%S")
+	return to_ret
+
+
+def addScheduleAux(start_date, end_date):
+    try:
+        start_date_p = datetime.datetime.strptime(start_date, "%d-%m-%y %H:%M:%S")
+    except:
+        return f"Invalid Start Date: {start_date}"
+    try:
+        end_date_p = datetime.datetime.strptime(end_date, "%d-%m-%y %H:%M:%S")
+    except:
+        return f"Invalid End Date: {end_date}"
+    if start_date_p > end_date_p:
+        return "Invalid Date Range"
+    if getCurrentTime() > start_date_p:
+        return f"Stale Start Date: {start_date}"
+    scheduler_data = scheduler_ref.get() if scheduler_ref.get() else []
+    if scheduler_data:
+        # check overlapping schedules
+        for dates in scheduler_data:
+            s, e = list(dates.items())[0]
+            s_p = datetime.datetime.strptime(s, "%d-%m-%y %H:%M:%S")
+            e_p = datetime.datetime.strptime(e, "%d-%m-%y %H:%M:%S")
+            if (start_date_p > s_p and start_date_p < e_p) or (end_date_p > s_p and end_date_p < e_p):
+                return f"Overlapping Dates: {s} to {e}"
+    scheduler_data.append({start_date:end_date})
+    scheduler_ref.set(scheduler_data)
 
 
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
@@ -177,11 +168,11 @@ def update_db():
 
 
 @app.route("/generateCSV")
-def generate_csv():
+def generateCSV():
     startdate = session['startdate']
     enddate = session['enddate']
     err_message = 'Please enter a valid date range'
-    res = generateCSV(startdate, enddate)
+    res = generateCSVAux(startdate, enddate)
     if res == "ERROR":
         session['res'] = err_message
         return redirect(url_for("home", res=err_message))
@@ -256,20 +247,29 @@ def scheduler():
     form = SchedulerForm()
     scheduler_data = scheduler_ref.get()
     parsed_data = []
-    for i in range(len(scheduler_data)):
-        if scheduler_data[i]:
-            for s,e in scheduler_data[i].items():
+    if scheduler_data:
+        changed = False
+        curr_time = getCurrentTime()
+        print(scheduler_data)
+        for i in range(len(scheduler_data)):
+            s, e = list(scheduler_data[i].items())[0]
+            # remove stale data 
+            e_time = datetime.datetime.strptime(e, "%d-%m-%y %H:%M:%S")
+            if e_time < curr_time:
+                scheduler_data.pop(i)
+                changed = True
+            else:
                 parsed_data.append((i, s, e))
+            if changed:
+                scheduler_ref.set(scheduler_data)
+
     res = session['res'] if 'res' in session else ''
     if res:
         session.pop('res')
-    print(f"validate_on_submit: {form.validate_on_submit()}")
-    print(f"startdate: {form.startdate.data}, enddate: {form.enddate.data}")
     if form.validate_on_submit():
         # validate date is ok within the scheduler_data
         session['startdate'] = form.startdate.data
         session['enddate'] = form.enddate.data
-        print(f"startdate: {form.startdate.data}, enddate: {form.enddate.data}")
         return redirect('addSchedule')
     return render_template("scheduler.html", scheduler_data=parsed_data, form=form, res=res)
 
@@ -277,8 +277,9 @@ def scheduler():
 @app.route("/deleteSchedule")
 def deleteSchedule():
     schedule_id = request.args.get('id')
-    schedule_to_delete = db.reference(f'scheduler/{schedule_id}')
-    schedule_to_delete.delete()
+    scheduler_data = scheduler_ref.get()
+    scheduler_data.pop(int(schedule_id))
+    scheduler_ref.set(scheduler_data)
     return redirect('scheduler')
 
 
@@ -286,15 +287,11 @@ def deleteSchedule():
 def addSchedule():
     startdate = session['startdate']
     enddate = session['enddate']
-    # res = generateCSV(startdate, enddate)
-    # if res == "ERROR":
-    #     session['res'] = 'Please enter a valid date range'
-    #     return redirect(url_for("home", res='Please enter a valid date range'))
-    # else:
-    #     session['res'] = res
-    #     return redirect(url_for("scheduler", res=res))
-    print(f"startdate: {startdate}, enddate: {enddate}")
-    return redirect(url_for("scheduler"))
+    res = addScheduleAux(startdate, enddate)
+    if res:
+        session['res'] = res
+        return redirect(url_for("scheduler", res=res))
+    return redirect(url_for("scheduler", res=''))
 
 
 if __name__ == "__main__":
