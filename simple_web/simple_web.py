@@ -158,12 +158,20 @@ def home():
     next_sched = ''
     curr_time = datetime.datetime.now()
     if scheduler_data:
-        s_0, e_0 = list(scheduler_data[0].items())[0]
-        s_p = datetime.datetime.strptime(s_0, "%d-%m-%y %H:%M:%S")
-        if action_data == 'off':
-            next_sched = f'System will turn on at   {s_0}'
-        elif action_data == 'on' and curr_time > s_p:
-            next_sched = f'System will turn off at   {e_0}'
+        changed = False
+        for i in range(len(scheduler_data)):
+            s_0, e_0 = list(scheduler_data[0].items())[0]
+            s_p = datetime.datetime.strptime(s_0, "%d-%m-%y %H:%M:%S")
+            e_p = datetime.datetime.strptime(e_0, "%d-%m-%y %H:%M:%S")
+            if (curr_time > e_p):
+                scheduler_data.pop(0)
+                changed = True
+            elif action_data == 'off':
+                next_sched = f'System will turn on at   {s_0}'
+            elif action_data == 'on' and curr_time > s_p:
+                next_sched = f'System will turn off at   {e_0}'
+        if changed:
+            scheduler_ref.set(scheduler_data)
     res = session['res'] if 'res' in session else ''
     if res == 'Please enter a valid date range':
         session.pop('res')
@@ -276,7 +284,6 @@ def scheduler():
                 parsed_data.append((i, s, e))
             if changed:
                 scheduler_ref.set(scheduler_data)
-
     res = session['res'] if 'res' in session else ''
     if res:
         session.pop('res')

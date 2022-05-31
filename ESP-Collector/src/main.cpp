@@ -194,6 +194,8 @@ vector<string> getSensorNameTime(string &ret_data) {
 
 time_t getSchedulerTime(string sched_time_str) {
   removeCharsFromString(sched_time_str, "{}\"");
+  Serial.print("sched_time_str: ");
+  Serial.println(sched_time_str.c_str());
   struct tm sched_time;
   strptime(sched_time_str.c_str(), "%d-%m-%y %H:%M:%S", &sched_time);
   return mktime(&sched_time);
@@ -211,23 +213,15 @@ void checkScheduler(time_t curr_time) {
       int m_pos = curr_sched_s.find("\":");
       string start_sched_s = curr_sched_s.substr(0, m_pos);
       string end_sched_s = curr_sched_s.substr(m_pos+3);
-      removeCharsFromString(start_sched_s, "{}\"");
-      removeCharsFromString(end_sched_s, "{}\"");
-      Serial.print("start_sched_s: ");
-      Serial.println(start_sched_s.c_str());
-      Serial.print("end_sched_s: ");
-      Serial.println(end_sched_s.c_str());
       time_t s_0 = getSchedulerTime(start_sched_s);
       time_t e_0 = getSchedulerTime(end_sched_s);
       if (Firebase.RTDB.getString(&fbdo, "action/")) {
         string action = fbdo.to<string>();
         if (difftime(curr_time, e_0) > 0) {
-          Serial.print("1 scheduler_data_json: ");
-          Serial.println(scheduler_data_json->raw());
           scheduler_data_json->remove(0);
           Serial.print("2 scheduler_data_json: ");
           Serial.println(scheduler_data_json->raw());
-          Firebase.RTDB.set(&fbdo, "scheduler/", scheduler_data_json);
+          Firebase.RTDB.setArray(&fbdo, "scheduler/", scheduler_data_json);
           if (action.compare("off")!=0) {
             Firebase.RTDB.set(&fbdo, "/action", "off");
             Serial.println("Turning system off!");
