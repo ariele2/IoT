@@ -202,7 +202,6 @@ time_t getSchedulerTime(string sched_time_str) {
 }
 
 
-// Continue this code
 void checkScheduler(time_t curr_time) {
   if (Firebase.RTDB.getArray(&fbdo, "scheduler/")) {
     FirebaseJsonArray *scheduler_data_json = fbdo.to<FirebaseJsonArray*>();
@@ -219,9 +218,14 @@ void checkScheduler(time_t curr_time) {
         string action = fbdo.to<string>();
         if (difftime(curr_time, e_0) > 0) {
           scheduler_data_json->remove(0);
+          if (scheduler_data_json->size() == 0) {
+            Firebase.RTDB.deleteNode(&fbdo, "scheduler/");
+          }
+          else {
+            Firebase.RTDB.setArray(&fbdo, "scheduler/", scheduler_data_json);
+          }
           Serial.print("2 scheduler_data_json: ");
           Serial.println(scheduler_data_json->raw());
-          Firebase.RTDB.setArray(&fbdo, "scheduler/", scheduler_data_json);
           if (action.compare("off")!=0) {
             Firebase.RTDB.set(&fbdo, "/action", "off");
             Serial.println("Turning system off!");
