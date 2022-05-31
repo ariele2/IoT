@@ -32,6 +32,13 @@
             </div>
             {% endif %}
         </div>
+        {% if next_sched %}
+        <div id = "nextSched" class="row mt-2">
+            <div class="alert alert-primary alert-text" role="alert">
+                {{next_sched}}
+            </div>
+        </div>
+        {% endif %}
         <form class="row mt-2" action="" method='POST' name="myform">
                 {{ form.csrt_token }}
                 <div class="col-xs-12 col-md-4">

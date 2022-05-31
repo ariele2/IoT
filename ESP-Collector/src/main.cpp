@@ -7,6 +7,8 @@
 #include "string.h"
 #include <map>
 #include <vector>
+#include "time.h"
+#include <HTTPClient.h>
 
 
 // Insert your network credentials
@@ -136,6 +138,33 @@ void setup() {
   }
 }
 
+String serverPath = "http://just-the-time.appspot.com/";
+
+time_t genCurrTime() {
+  HTTPClient http;
+  http.begin(serverPath.c_str());
+  int httpResponseCode = http.GET();
+  String payload;
+  if (httpResponseCode > 0) {
+    payload = http.getString();
+  }
+  else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+  http.end();
+  string date = payload.c_str();
+  string year = date.substr(2,2);
+  string month = date.substr(5,2);
+  string day = date.substr(8,2);
+  string hour = date.substr(11);
+  string formated_date = day + "-" + month + "-" + year + " " + hour;
+  struct tm timeinfo;
+  strptime(formated_date.c_str(), "%d-%m-%y %H:%M:%S", &timeinfo);
+  timeinfo.tm_hour += 3; // Align to Israel clock
+  time_t c_time = mktime(&timeinfo);
+  return c_time;
+}
 
 vector<string> getSensorNameTime(string &ret_data) {
   string curr_sensor = "";
@@ -163,12 +192,53 @@ vector<string> getSensorNameTime(string &ret_data) {
 }
 
 
+time_t getSchedulerTime(string sched_time_str) {
+  removeCharsFromString(sched_time_str, "{}\"");
+  struct tm sched_time;
+  strptime(sched_time_str.c_str(), "%d-%m-%y %H:%M:%S", &sched_time);
+  return mktime(&sched_time);
+}
+
+
 // Continue this code
-void checkScheduler() {
+void checkScheduler(time_t curr_time) {
   if (Firebase.RTDB.getArray(&fbdo, "scheduler/")) {
-    FirebaseJsonArray *scheduler_data_json = fbdo.to<FirebaseJsonArray *>()
-    Serial.println(scheduler_data_json->raw());
-    
+    FirebaseJsonArray *scheduler_data_json = fbdo.to<FirebaseJsonArray*>();
+    FirebaseJsonData curr_sched;
+    scheduler_data_json->get(curr_sched, 0);
+    if (curr_sched.success) {
+      string curr_sched_s = curr_sched.to<string>();
+      int m_pos = curr_sched_s.find("\":");
+      string start_sched_s = curr_sched_s.substr(0, m_pos);
+      string end_sched_s = curr_sched_s.substr(m_pos+3);
+      removeCharsFromString(start_sched_s, "{}\"");
+      removeCharsFromString(end_sched_s, "{}\"");
+      Serial.print("start_sched_s: ");
+      Serial.println(start_sched_s.c_str());
+      Serial.print("end_sched_s: ");
+      Serial.println(end_sched_s.c_str());
+      time_t s_0 = getSchedulerTime(start_sched_s);
+      time_t e_0 = getSchedulerTime(end_sched_s);
+      if (Firebase.RTDB.getString(&fbdo, "action/")) {
+        string action = fbdo.to<string>();
+        if (difftime(curr_time, e_0) > 0) {
+          Serial.print("1 scheduler_data_json: ");
+          Serial.println(scheduler_data_json->raw());
+          scheduler_data_json->remove(0);
+          Serial.print("2 scheduler_data_json: ");
+          Serial.println(scheduler_data_json->raw());
+          Firebase.RTDB.set(&fbdo, "scheduler/", scheduler_data_json);
+          if (action.compare("off")!=0) {
+            Firebase.RTDB.set(&fbdo, "/action", "off");
+            Serial.println("Turning system off!");
+          }
+        }
+        else if (difftime(curr_time, s_0) > 0 && action.compare("on")!=0) {
+          Firebase.RTDB.set(&fbdo, "/action", "on");
+          Serial.println("Turning system on!");
+        }
+      }
+    }
   }
 }
 
@@ -179,6 +249,8 @@ void checkAction() {
     Serial.print("[DEBUG] action: ");
     Serial.println(action.c_str());
     while (action.compare("off")==0) {
+      time_t curr_time = genCurrTime();
+      checkScheduler(curr_time);
       Firebase.RTDB.getString(&fbdo, "action/");
       action = fbdo.to<string>();
       Serial.println("System is off!");
@@ -191,7 +263,9 @@ void checkAction() {
 unsigned long recvDataPrevMillis = 0;
 
 void loop() {
-  if (Firebase.ready() && signupOK && (millis() - recvDataPrevMillis > 20000 || recvDataPrevMillis == 0)) {
+  if (Firebase.ready() && signupOK && (millis() - recvDataPrevMillis > 2000 || recvDataPrevMillis == 0)) {
+    time_t curr_time = genCurrTime();
+    checkScheduler(curr_time);
     checkAction();
     recvDataPrevMillis = millis();
    

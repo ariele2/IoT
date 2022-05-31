@@ -134,6 +134,7 @@ def addScheduleAux(start_date, end_date):
     if getCurrentTime() > start_date_p:
         return f"Stale Start Date: {start_date}"
     scheduler_data = scheduler_ref.get() if scheduler_ref.get() else []
+    insert_index = 0
     if scheduler_data:
         # check overlapping schedules
         for dates in scheduler_data:
@@ -142,14 +143,27 @@ def addScheduleAux(start_date, end_date):
             e_p = datetime.datetime.strptime(e, "%d-%m-%y %H:%M:%S")
             if (start_date_p > s_p and start_date_p < e_p) or (end_date_p > s_p and end_date_p < e_p):
                 return f"Overlapping Dates: {s} to {e}"
-    scheduler_data.append({start_date:end_date})
+            # insert the new schedule in order.
+            if e_p < start_date_p:    # if we got a schedule later then the current end, add 1
+                insert_index += 1
+    scheduler_data.insert(insert_index, {start_date:end_date})
     scheduler_ref.set(scheduler_data)
 
 
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
 def home():
     form = InfoForm()
+    scheduler_data = scheduler_ref.get()
     action_data = action_ref.get()
+    next_sched = ''
+    curr_time = datetime.datetime.now()
+    if scheduler_data:
+        s_0, e_0 = list(scheduler_data[0].items())[0]
+        s_p = datetime.datetime.strptime(s_0, "%d-%m-%y %H:%M:%S")
+        if action_data == 'off':
+            next_sched = f'System will turn on at   {s_0}'
+        elif action_data == 'on' and curr_time > s_p:
+            next_sched = f'System will turn off at   {e_0}'
     res = session['res'] if 'res' in session else ''
     if res == 'Please enter a valid date range':
         session.pop('res')
@@ -158,7 +172,7 @@ def home():
         session['startdate'] = form.startdate.data
         session['enddate'] = form.enddate.data
         return redirect('generateCSV')
-    return render_template("index.html", val=action_data, form=form, res=res)
+    return render_template("index.html", val=action_data, form=form, res=res, next_sched=next_sched)
 
 
 @app.route("/updateDB")

@@ -75,6 +75,25 @@ def set_system_time():
     os.system("sudo date -s \'" + year + "-" + month + "-" + day + " " + times + "\'") 
 
 
+def checkScheduler(curr_time):
+	scheduler_ref = db.reference("/scheduler")
+	scheduler_data = scheduler_ref.get()
+	print(f"scheduler_data: {scheduler_data}")
+	if scheduler_data:
+		s, e = list(scheduler_data[0].items())[0]
+		s_p = datetime.datetime.strptime(s, "%d-%m-%y %H:%M:%S")
+		e_p = datetime.datetime.strptime(e, "%d-%m-%y %H:%M:%S")
+		if curr_time > e_p:
+			scheduler_data.pop(0)
+			scheduler_ref.set(scheduler_data)
+			if action_ref.get() != 'off':
+				action_ref.set("off")
+				print(f"Turning system off!")
+		elif curr_time > s_p and action_ref.get() != 'on':
+			action_ref.set("on")
+			print(f"Turning system on!")
+
+
 cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path})
@@ -121,14 +140,21 @@ caller_ref = db.reference('/call_id')
 sensorID = "V-01"
 # make a while loop that works every 30 secs
 while(True):
-	curr_time = time.time()
+	curr_machine_time = time.time()
+	curr_time = datetime.datetime.strptime(get_current_time(), "%d-%m-%y %H:%M:%S")
 	# validate that the system is on
 	action_data = action_ref.get()
+
+	checkScheduler(curr_time)
+
 	while action_data == 'off':
+		curr_time = datetime.datetime.strptime(get_current_time(), "%d-%m-%y %H:%M:%S")
+		checkScheduler(curr_time)
 		time.sleep(5)
 		action_data = action_ref.get()
+		print('System is off!')
 
-	if curr_time - prev_time > time_between_frame:
+	if curr_machine_time - prev_time > time_between_frame:
 		cam = cv2.VideoCapture(0)
 		res, image = cam.read()
 		if not res:	#didn't capture an image
@@ -219,7 +245,7 @@ while(True):
 						print(confidences[i])
 				else:
 					count_error = count_error + 1
-		prev_time = curr_time
+		prev_time = curr_machine_time
 		# show the output image
 		num_of_pepole = len(idxs) - count_error 
 		print("Found ", num_of_pepole , "People")
@@ -232,7 +258,7 @@ while(True):
 		caller_ref.update({sensorID:call_id+1})
 		real_data_ref.update(insert_real_data)
 		if debug_Mode:
-			cv2.imshow("Image"+str(curr_time), image)
+			cv2.imshow("Image"+str(curr_machine_time), image)
 			cv2.waitKey(2000)
 			cv2.destroyAllWindows()
 		cam.release()

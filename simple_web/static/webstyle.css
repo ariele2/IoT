@@ -55,6 +55,12 @@ h1 {
     position: relative;
 }
 
+#nextSched {
+    position: relative; 
+    left: 8.2%; 
+    width: 84.4%;
+}
+
 .col-xs-12, .col-xs-5, .col-xs-2 {
     margin-top: 3% !important;
 }

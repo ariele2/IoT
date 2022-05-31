@@ -38,9 +38,13 @@
 #define TRIG_PIN5 26
 #define ECHO_PIN5 27
 
+#define SITTING_DISTANCE1 50
+#define SITTING_DISTANCE2 50
+#define SITTING_DISTANCE3 50
+#define SITTING_DISTANCE4 50
+#define SITTING_DISTANCE5 50
 
 #define ERROR_VEC_LEN 5 // error vec holds the last sitting events (yes/no/error)
-#define SITTING_DISTANCE 90 // the distance in cm in which we determine if someone is sitting
 #define FIREBASE_TIME_INTERVAL 2000 // time interval to send data for the firebase in ms
 
 
@@ -114,7 +118,7 @@ vector<string> getSensorsNames(string which) {
         sen_to_find = sens_count < 5;
       }
       else if (which.compare("S6-10") == 0) {
-        sen_to_find = sens_count > 5 && sens_count < 10;
+        sen_to_find = sens_count >= 5 && sens_count < 10;
       }
       int sensor_pos = sensors_string.find_first_of(':');
       string sensor = sensors_string.substr(0,sensor_pos);
@@ -163,14 +167,14 @@ void setup() {
   // connect to firebase
   connect2Firebase();
 
-  vector<string> sensors_ids = getSensorsNames("S1-5");
+  vector<string> sensors_ids = getSensorsNames("S6-10");
 
-  // {sensorID:{TRIG_PIN,ECHO_PIN,counter,total distance}
-  vector<int> vec_s01 = {TRIG_PIN1, ECHO_PIN1, 0, 0};
-  vector<int> vec_s02 = {TRIG_PIN2, ECHO_PIN2, 0, 0};
-  vector<int> vec_s03 = {TRIG_PIN3, ECHO_PIN3, 0, 0};
-  vector<int> vec_s04 = {TRIG_PIN4, ECHO_PIN4, 0, 0};
-  vector<int> vec_s05 = {TRIG_PIN5, ECHO_PIN5, 0, 0};
+  // {sensorID:{TRIG_PIN,ECHO_PIN,counter,total distance, sitting_distance}
+  vector<int> vec_s01 = {TRIG_PIN1, ECHO_PIN1, 0, 0, SITTING_DISTANCE1};
+  vector<int> vec_s02 = {TRIG_PIN2, ECHO_PIN2, 0, 0, SITTING_DISTANCE2};
+  vector<int> vec_s03 = {TRIG_PIN3, ECHO_PIN3, 0, 0, SITTING_DISTANCE3};
+  vector<int> vec_s04 = {TRIG_PIN4, ECHO_PIN4, 0, 0, SITTING_DISTANCE4};
+  vector<int> vec_s05 = {TRIG_PIN5, ECHO_PIN5, 0, 0, SITTING_DISTANCE5};
   sensors_dist = {{sensors_ids[0], vec_s01}, {sensors_ids[1], vec_s02}, {sensors_ids[2], vec_s03}, 
                   {sensors_ids[3], vec_s04}, {sensors_ids[4], vec_s05}};
 }
@@ -218,7 +222,7 @@ string int2str(int num) {
 
 
 // calculates counter for each sensor
-vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int tot_distance) {
+vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int tot_distance, int sitting_distance) {
   float distance;
   digitalWrite(trig_pin, LOW);
   delayMicroseconds(2);
@@ -227,7 +231,7 @@ vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int t
   digitalWrite(trig_pin, LOW);
   unsigned long duration = pulseIn(echo_pin, HIGH);
   distance = (duration/2) / 29.1;
-  if (distance < SITTING_DISTANCE) {
+  if (distance < sitting_distance) {
     sensor_counter++;
   }
   else {
@@ -332,7 +336,7 @@ void loop() {
     for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and get data for each of them
       Serial.print("[DEBUG] sensorID: ");
       Serial.print((it->first).c_str());
-      vector<int> res = calcSitCounter(it->second[0], it->second[1], it->second[2], it->second[3]); // distance
+      vector<int> res = calcSitCounter(it->second[0], it->second[1], it->second[2], it->second[3], it->second[4]); // distance
       it->second[2] = res[0];
       it->second[3] = res[1];
       Serial.print("; counter: ");
