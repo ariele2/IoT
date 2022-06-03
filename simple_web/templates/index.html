@@ -35,7 +35,7 @@
         {% if next_sched %}
         <div id = "nextSched" class="row mt-2">
             <div class="alert alert-primary alert-text" role="alert">
-                {{next_sched}}
+                {{next_sched}} <span id="schedule_timer"></span>
             </div>
         </div>
         {% endif %}
@@ -72,4 +72,15 @@
         </div>
         {% endif %}
     </div>
+{% endblock %}
+
+{% block script %}
+<script src="static/jquery.countdown.min.js"></script>
+<script type="text/javascript">
+    $('#schedule_timer').countdown('{{sched_time}}', function(event) {
+        $(this).html(event.strftime('%D days %H:%M:%S'));
+    }).on('finish.countdown', function() {
+        location.reload();
+    });
+</script>
 {% endblock %}

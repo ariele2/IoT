@@ -67,7 +67,8 @@ def updateDB():
 
 def generateCSVAux(start_date, end_date):
     # create the columns titles
-    columns_titles = ["sensorID", "Type", "Event", "Time", "Day"]
+    columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
+    sensors_data = sensors_ref.get()
     df = pd.DataFrame(columns=columns_titles)
     # transfer date value to readable integers
     start_date = datetime.datetime.strptime(start_date[:16], "%a, %d %b %Y")
@@ -89,9 +90,15 @@ def generateCSVAux(start_date, end_date):
                 continue
             event = val['value']
             day = date.strftime("%d/%m/%y")
-            print("[DEBUG] day: ", day)
-            # print("[DEBUG] sensor_id: ", sensor_id, ", event: ", event, "time: ", time, ", day: ", day)
-            df.loc[len(df.index)] = [sensor_id, "-", event, time, day]
+            location = sensors_data[sensor_id]["location"]
+            if sensor_id.startswith('S'):
+                sensor_type = 'Sonar'
+            elif sensor_id.startswith('D'):
+                sensor_type = 'OpenMV Camera'
+            else: # sensor_id contains V
+                sensor_type = 'Rpi Camera'
+            # print("[DEBUG] sensor_id: ", sensor_id, ", event: ", event, "time: ", time, ", day: ", day, "sensor_type", sensor_type)
+            df.loc[len(df.index)] = [sensor_id, sensor_type, location, event, time, day]
     # create the csv file
     start_date_str = start_date.strftime("%d_%m_%y")
     end_date_str = end_date.strftime("%d_%m_%y")
@@ -155,7 +162,7 @@ def home():
     form = InfoForm()
     scheduler_data = scheduler_ref.get()
     action_data = action_ref.get()
-    next_sched = ''
+    next_sched = sched_time = ''
     curr_time = datetime.datetime.now()
     if scheduler_data:
         changed = False
@@ -167,9 +174,15 @@ def home():
                 scheduler_data.pop(0)
                 changed = True
             elif action_data == 'off':
-                next_sched = f'System will turn on at   {s_0}'
+                time_delta = curr_time - s_p
+                sched_time = curr_time - time_delta
+                sched_time.strftime('%Y/%d/%m %H:%M:%S')
+                next_sched = f'System activation in: '
             elif action_data == 'on' and curr_time > s_p:
-                next_sched = f'System will turn off at   {e_0}'
+                time_delta = e_p - curr_time
+                sched_time = curr_time + time_delta
+                sched_time.strftime('%Y/%d/%m %H:%M:%S')                
+                next_sched = f'System shutdown in: '
         if changed:
             scheduler_ref.set(scheduler_data)
     res = session['res'] if 'res' in session else ''
@@ -180,7 +193,8 @@ def home():
         session['startdate'] = form.startdate.data
         session['enddate'] = form.enddate.data
         return redirect('generateCSV')
-    return render_template("index.html", val=action_data, form=form, res=res, next_sched=next_sched)
+    return render_template("index.html", val=action_data, form=form, res=res, next_sched=next_sched, 
+                           sched_time=sched_time)
 
 
 @app.route("/updateDB")
@@ -246,9 +260,10 @@ def getSensors():
             uploaded_file = request.files[form.image.name]
             print(f"uploaded_file:  {uploaded_file}")
             uploaded_file.save('images/'+sensor_id + ".jpg")
-            blob = bucket.blob('images/'+sensor_id+str(sensor_image_prefix)+'.jpg')
+            blob = bucket.blob('images/'+sensor_id+'_'+str(sensor_image_prefix)+'.jpg')
             with open('images/'+sensor_id + '.jpg', 'rb') as img:
-                # blob.delete()
+                if blob.exists():
+                    blob.delete()
                 sensor_image_prefix += 1
                 blob = bucket.blob('images/'+sensor_id+'_'+str(sensor_image_prefix)+'.jpg')
                 print('images/'+sensor_id+'_'+str(sensor_image_prefix)+'.jpg')
