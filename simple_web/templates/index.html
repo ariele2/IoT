@@ -20,7 +20,7 @@
             </div>
             {% else %}
             <div class="col-xs-12 col-md-4">
-                <a href="/updateDB" type="button" class="btn btn-danger btn-lg actionBtn">OFF</a>
+                <a id="actionOff" href="/updateDB" type="button" class="btn btn-danger btn-lg actionBtn">OFF</a>
             </div>
             <div class="col-xs-12 col-md-7">
                 <div class="alert alert-success d-flex align-items-center" role="alert">
@@ -80,7 +80,7 @@
     $('#schedule_timer').countdown('{{sched_time}}', function(event) {
         $(this).html(event.strftime('%D days %H:%M:%S'));
     }).on('finish.countdown', function() {
-        location.reload();
+        location.href='/updateDB';
     });
 </script>
 {% endblock %}
