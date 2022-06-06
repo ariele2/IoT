@@ -93,17 +93,9 @@ def checkScheduler(curr_time):
 			action_ref.set("on")
 			print(f"Turning system on!")
 
-
-cred_obj = firebase_admin.credentials.Certificate("iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json")
-firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
-default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path})
-
-
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--image", required=False,
+ap.add_argument("-d", "--dir", required=True,
 	help="path to input image")
-ap.add_argument("-y", "--yolo", required=True,
-	help="base path to YOLO directory")
 ap.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3,
@@ -111,8 +103,15 @@ ap.add_argument("-t", "--threshold", type=float, default=0.3,
 args = vars(ap.parse_args())
 
 # load the COCO class labels our YOLO model was trained on
-labelsPath = os.path.sep.join([args["yolo"], "coco.names"])
+dirPath = os.path.abspath(args["dir"])
+print(f"[DEBUG] dirPath: {dirPath}")
+labelsPath = os.path.sep.join([dirPath, "yolo-coco", "coco.names"])
 LABELS = open(labelsPath).read().strip().split("\n")
+# initialize database object
+cred_file = os.path.sep.join([dirPath, "iotprojdb-firebase-adminsdk-q9c5k-113a48d6a7.json"])
+cred_obj = firebase_admin.credentials.Certificate(cred_file)
+firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
+default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path})
 # initialize a list of colors to represent each possible class label
 np.random.seed(42)
 COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),
@@ -122,8 +121,8 @@ if debug_Mode:
 	print("[DEBUG]: COLORS = ", COLORS)
 
 # derive the paths to the YOLO weights and model configuration
-weightsPath = os.path.sep.join([args["yolo"], "yolov3.weights"])
-configPath = os.path.sep.join([args["yolo"], "yolov3.cfg"])
+weightsPath = os.path.sep.join([dirPath, "yolo-coco", "yolov3.weights"])
+configPath = os.path.sep.join([dirPath, "yolo-coco", "yolov3.cfg"])
 # load our YOLO object detector trained on COCO dataset (80 classes)
 if debug_Mode:
 	print("[INFO] loading YOLO from disk...")

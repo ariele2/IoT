@@ -24,6 +24,7 @@ firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.ap
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path, 'storageBucket': storage_path})
 
 csv_path = "csv_reports/"
+backup_path = "csv_backups"
 action_ref = db.reference("/action")
 data_ref = db.reference("/data")
 real_data_ref = db.reference("/real_data")
@@ -63,6 +64,45 @@ def updateDB():
         return "on"
     action_ref.set("off")
     return "off"
+
+
+def backupDayData(day_to_backup):   # day to back up should be of string format %d-%m-%y
+    columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
+    sensors_data = sensors_ref.get()
+    df = pd.DataFrame(columns=columns_titles)
+    data = data_ref.get()
+    start_day = datetime.datetime.strptime(day_to_backup, '%d-%m-%y') - datetime.timedelta(days=1)
+    end_day = datetime.datetime.strptime(day_to_backup, '%d-%m-%y')
+    if not data:
+        return
+    for key, val in data.items():
+        if key == "call_id":
+            continue
+        key_arr = key.split(" ")
+        date, time, sensor_id = key_arr
+        date = datetime.datetime.strptime(date, "%d-%m-%y")
+        if date < start_day or date > end_day:
+            continue
+        event = val['value']
+        day = date.strftime("%d/%m/%y")
+        location = sensors_data[sensor_id]["location"]
+        if sensor_id.startswith('S'):
+            sensor_type = 'Sonar'
+        elif sensor_id.startswith('D'):
+            sensor_type = 'OpenMV Camera'
+        else: # sensor_id contains V
+            sensor_type = 'Rpi Camera'
+        # print("[DEBUG] sensor_id: ", sensor_id, ", event: ", event, "time: ", time, ", day: ", day, "sensor_type", sensor_type)
+        df.loc[len(df.index)] = [sensor_id, sensor_type, location, event, time, day]
+    start_day_str = start_day.strftime("%d_%m_%y")
+    end_day_str = end_day.strftime("%d_%m_%y")
+    new_csv_filename = backup_path + "backup_" + start_date_str + "-" + end_date_str + ".csv"
+    df.to_csv(new_csv_filename, index=False)
+    # upload the file to the storage
+    blob = bucket.blob(new_csv_filename)
+    with open(new_csv_filename, 'rb') as f:
+        blob.upload_from_file(f)
+    blob.make_public()
 
 
 def generateCSVAux(start_date, end_date):
