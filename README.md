@@ -5,7 +5,7 @@
 3. Can monitor the amount of people entering/exiting the room/area.
 4. There are 2 GUIs for the app: 
 
-      a. Web App
+      a. Web App - https://smartbuilding.pythonanywhere.com/
       
       b. UNITY
 
