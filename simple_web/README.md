@@ -4,6 +4,7 @@ pip install flask_wtf
 pip install wtforms
 pip install firebase_admin
 pip install pandas
+pip install apscheduler
 
 Then run the server from within the simple_web folder:
 python simple_web.py

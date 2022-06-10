@@ -59,14 +59,14 @@
             <div class="col-xs-4 col-md-4">
             </div>
             <div class="col-xs-12 col-md-7">
-                {% if res != 'Please enter a valid date range' %}
-                <a href={{res}} class="btn btn-primary downloadBtn"> Download </a>
-                {% else %}
+                {% if res == 'Please enter a valid date range' or res == 'Invalid end date... I am not god' %}
                 <div class="alert alert-danger d-flex align-items-center error" role="alert">
                     <div class="alert-text recordingLabel">
                       {{res}}
                     </div>
                 </div>
+                {% else %}
+                <a href={{res}} class="btn btn-primary downloadBtn"> Download </a>
                 {% endif %}
             </div>
         </div>

@@ -12,7 +12,7 @@ import datetime
 from io import StringIO
 import re
 import os
-
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 
@@ -23,24 +23,22 @@ storage_path = 'iotprojdb.appspot.com'
 firebase_path = 'https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/'
 default_app = firebase_admin.initialize_app(cred_obj, {'databaseURL':firebase_path, 'storageBucket': storage_path})
 
+
 csv_path = "csv_reports/"
-backup_path = "csv_backups"
+backup_path = "csv_backups/"
 action_ref = db.reference("/action")
 data_ref = db.reference("/data")
 real_data_ref = db.reference("/real_data")
 sensors_ref = db.reference("/sensors")
 scheduler_ref = db.reference("/scheduler")
 bucket = storage.bucket()
-
+sensors_data = sensors_ref.get()
+sensors_ids = list(sensors_data.keys())
 
 class InfoForm(FlaskForm):
     startdate = DateField('', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     enddate = DateField('-', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     submit = SubmitField('Generate CSV')
-
-
-sensors_data = sensors_ref.get()
-sensors_ids = list(sensors_data.keys())
 
 
 class editSensorForm(FlaskForm):
@@ -57,102 +55,6 @@ class SchedulerForm(FlaskForm):
     submit = SubmitField('Add')
 
 
-def updateDB():
-    action_data = action_ref.get()
-    if action_data == "off":
-        action_ref.set("on")
-        return "on"
-    action_ref.set("off")
-    return "off"
-
-
-def backupDayData(day_to_backup):   # day to back up should be of string format %d-%m-%y
-    columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
-    sensors_data = sensors_ref.get()
-    df = pd.DataFrame(columns=columns_titles)
-    data = data_ref.get()
-    start_day = datetime.datetime.strptime(day_to_backup, '%d-%m-%y') - datetime.timedelta(days=1)
-    end_day = datetime.datetime.strptime(day_to_backup, '%d-%m-%y')
-    if not data:
-        return
-    for key, val in data.items():
-        if key == "call_id":
-            continue
-        key_arr = key.split(" ")
-        date, time, sensor_id = key_arr
-        date = datetime.datetime.strptime(date, "%d-%m-%y")
-        if date < start_day or date > end_day:
-            continue
-        event = val['value']
-        day = date.strftime("%d/%m/%y")
-        location = sensors_data[sensor_id]["location"]
-        if sensor_id.startswith('S'):
-            sensor_type = 'Sonar'
-        elif sensor_id.startswith('D'):
-            sensor_type = 'OpenMV Camera'
-        else: # sensor_id contains V
-            sensor_type = 'Rpi Camera'
-        # print("[DEBUG] sensor_id: ", sensor_id, ", event: ", event, "time: ", time, ", day: ", day, "sensor_type", sensor_type)
-        df.loc[len(df.index)] = [sensor_id, sensor_type, location, event, time, day]
-    start_day_str = start_day.strftime("%d_%m_%y")
-    end_day_str = end_day.strftime("%d_%m_%y")
-    new_csv_filename = backup_path + "backup_" + start_date_str + "-" + end_date_str + ".csv"
-    df.to_csv(new_csv_filename, index=False)
-    # upload the file to the storage
-    blob = bucket.blob(new_csv_filename)
-    with open(new_csv_filename, 'rb') as f:
-        blob.upload_from_file(f)
-    blob.make_public()
-
-
-def generateCSVAux(start_date, end_date):
-    # create the columns titles
-    columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
-    sensors_data = sensors_ref.get()
-    df = pd.DataFrame(columns=columns_titles)
-    # transfer date value to readable integers
-    start_date = datetime.datetime.strptime(start_date[:16], "%a, %d %b %Y")
-    end_date = datetime.datetime.strptime(end_date[:16], "%a, %d %b %Y")
-    # validate the dates
-    if start_date > end_date:
-        return "ERROR"
-    # query the dates and arrange in the dataframe
-    data = data_ref.get()
-    if data:
-        # print("[DEBUG] data: ", data)
-        for key, val in data.items():
-            if key == "call_id":
-                continue
-            key_arr = key.split(" ")
-            date, time, sensor_id = key_arr
-            date = datetime.datetime.strptime(date, "%d-%m-%y")
-            if date < start_date or date > end_date:
-                continue
-            event = val['value']
-            day = date.strftime("%d/%m/%y")
-            location = sensors_data[sensor_id]["location"]
-            if sensor_id.startswith('S'):
-                sensor_type = 'Sonar'
-            elif sensor_id.startswith('D'):
-                sensor_type = 'OpenMV Camera'
-            else: # sensor_id contains V
-                sensor_type = 'Rpi Camera'
-            # print("[DEBUG] sensor_id: ", sensor_id, ", event: ", event, "time: ", time, ", day: ", day, "sensor_type", sensor_type)
-            df.loc[len(df.index)] = [sensor_id, sensor_type, location, event, time, day]
-    # create the csv file
-    start_date_str = start_date.strftime("%d_%m_%y")
-    end_date_str = end_date.strftime("%d_%m_%y")
-    new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".csv"
-    df.to_csv(new_csv_filename, index=False)
-    # upload the file to the storage
-    blob = bucket.blob(new_csv_filename)
-    with open(new_csv_filename, 'rb') as f:
-        blob.upload_from_file(f)
-    blob.make_public()
-    # generate a download url and return it
-    return blob.public_url
-
-
 def getCurrentTime():
 	res = urlopen('http://just-the-time.appspot.com/')
 	result = res.read().strip()
@@ -165,6 +67,109 @@ def getCurrentTime():
 	hour = hour.strftime("%H:%M:%S")
 	to_ret = datetime.datetime.strptime(day + "-" + month + "-" + year + " " + hour, "%d-%m-%y %H:%M:%S")
 	return to_ret
+
+
+def generateDF(start_time, end_time, df, backup=False):
+    data_ref = db.reference("/data")
+    sensors_data = sensors_ref.get()
+    data = data_ref.get()
+    if not data:
+        return
+    for key, val in data.items():
+        key_arr = key.split(" ")
+        date, time, sensor_id = key_arr
+        if backup:
+            date = datetime.datetime.strptime(date+' '+time, "%d-%m-%y %H:%M:%S")
+        else:
+            date = datetime.datetime.strptime(date, "%d-%m-%y")
+        # print(f"date: {date}, start_time: {start_time}, end_time {end_time}")
+        if date < start_time or date > end_time:
+            continue
+        event = val['value']
+        day = date.strftime("%d/%m/%y")
+        location = sensors_data[sensor_id]["location"]
+        if sensor_id.startswith('S'):
+            sensor_type = 'Sonar'
+        elif sensor_id.startswith('D'):
+            sensor_type = 'OpenMV Camera'
+        else: # sensor_id contains V
+            sensor_type = 'Rpi Camera'
+        # print("[DEBUG] sensor_id: ", sensor_id, ", event: ", event, "time: ", time, ", day: ", day, "sensor_type", sensor_type)
+        df.loc[len(df.index)] = [sensor_id, sensor_type, location, event, time, day]
+        if backup:
+            data_ref.child(key).delete()
+
+
+def backupDayData(day = None):   
+    columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
+    df = pd.DataFrame(columns=columns_titles)
+    if not day:
+        day = getCurrentTime()
+    start_day = day - datetime.timedelta(days=1)
+    print("backup in progress")
+    generateDF(start_day, day, df, backup=True)
+    start_day_str = start_day.strftime("%d_%m_%y")
+    new_csv_filename = backup_path + "backup_" + start_day_str + ".csv"
+    df.to_csv(new_csv_filename, index=False)
+    # upload the file to the storage
+    blob = bucket.blob(new_csv_filename)
+    with open(new_csv_filename, 'rb') as f:
+        blob.upload_from_file(f)
+    blob.make_public()
+    os.remove(new_csv_filename)
+    print(blob.public_url)
+    print("done")
+
+
+def updateDB():
+    action_data = action_ref.get()
+    if action_data == "off":
+        action_ref.set("on")
+        return "on"
+    action_ref.set("off")
+    return "off"
+
+
+def generateCSVAux(start_date, end_date):
+    # transfer date value to readable integers
+    start_date = datetime.datetime.strptime(start_date[:16], "%a, %d %b %Y")
+    end_date = datetime.datetime.strptime(end_date[:16], "%a, %d %b %Y")
+    curr_date = getCurrentTime()
+    # validate the dates
+    if start_date > end_date:
+        return "Please enter a valid date range"
+    if end_date + datetime.timedelta(days=1) < curr_date:
+        return "Invalid end date... I am not god"
+    blobs = list(bucket.list_blobs())
+    blobs = bucket.list_blobs()
+    inrange_blobs = []
+    for blob in blobs:
+        if not blob.name.startswith(backup_path+'backup_') or not blob.name[19:27]:
+            continue
+        print(f"blob.name: {blob.name} type: {type(blob.name)}")
+        blob_start_date = datetime.datetime.strptime(blob.name[19:27], "%d_%m_%y") 
+        if blob_start_date >= start_date and blob_start_date <= end_date:
+            inrange_blobs.append(blob.public_url)
+    if inrange_blobs:
+        df = pd.concat(map(pd.read_csv, inrange_blobs), ignore_index=True)
+    else:
+        columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
+        df = pd.DataFrame(columns=columns_titles)
+    if curr_date-end_date <= datetime.timedelta(days=1):
+        generateDF(end_date, end_date, df)
+    # create the csv file
+    start_date_str = start_date.strftime("%d_%m_%y")
+    end_date_str = end_date.strftime("%d_%m_%y")
+    new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".csv"
+    df.to_csv(new_csv_filename, index=False)
+    # upload the file to the storage
+    blob = bucket.blob(new_csv_filename)
+    with open(new_csv_filename, 'rb') as f:
+        blob.upload_from_file(f)
+    blob.make_public()
+    os.remove(new_csv_filename)
+    # generate a download url and return it
+    return blob.public_url
 
 
 def addScheduleAux(start_date, end_date):
@@ -197,13 +202,18 @@ def addScheduleAux(start_date, end_date):
     scheduler_ref.set(scheduler_data)
 
 
+backup_sched = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
+backup_sched.add_job(backupDayData, trigger='cron', hour='0')
+backup_sched.start()
+
+
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
 def home():
     form = InfoForm()
     scheduler_data = scheduler_ref.get()
     action_data = action_ref.get()
     next_sched = sched_time = ''
-    curr_time = datetime.datetime.now()
+    curr_time = getCurrentTime()
     if scheduler_data:
         changed = False
         for i in range(len(scheduler_data)):
@@ -247,14 +257,10 @@ def update_db():
 def generateCSV():
     startdate = session['startdate']
     enddate = session['enddate']
-    err_message = 'Please enter a valid date range'
-    res = generateCSVAux(startdate, enddate)
-    if res == "ERROR":
-        session['res'] = err_message
-        return redirect(url_for("home", res=err_message))
-    else:
-        session['res'] = res
-        return redirect(url_for("home", res=res))
+    msg = generateCSVAux(startdate, enddate)
+    if msg:
+        session['res'] = msg
+        return redirect(url_for("home", res=msg))
 
 
 @app.route("/status")
