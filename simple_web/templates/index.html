@@ -66,7 +66,9 @@
                     </div>
                 </div>
                 {% else %}
-                <a href={{res}} class="btn btn-primary downloadBtn"> Download </a>
+                    {% if res %}
+                        <a href={{res}} class="btn btn-primary downloadBtn"> Download </a>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
