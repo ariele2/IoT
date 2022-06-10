@@ -135,10 +135,12 @@ def generateCSVAux(start_date, end_date):
     start_date = datetime.datetime.strptime(start_date[:16], "%a, %d %b %Y")
     end_date = datetime.datetime.strptime(end_date[:16], "%a, %d %b %Y")
     curr_date = getCurrentTime()
+    print("GenerateCSVAux")
+    print(f"curr_date: {curr_date}, start_date: {start_date}, end_date: {end_date}")
     # validate the dates
     if start_date > end_date:
         return "Please enter a valid date range"
-    if end_date + datetime.timedelta(days=1) < curr_date:
+    if curr_date + datetime.timedelta(days=1) < end_date:
         return "Invalid end date... I am not god"
     blobs = list(bucket.list_blobs())
     blobs = bucket.list_blobs()
