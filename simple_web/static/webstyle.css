@@ -61,6 +61,12 @@ h1 {
     width: 84.4%;
 }
 
+#titleIndex {
+    text-decoration: none;
+    font-style: normal;
+    color: black;
+}
+
 .col-xs-12, .col-xs-5, .col-xs-2 {
     margin-top: 3% !important;
 }
