@@ -238,9 +238,9 @@ def home():
         if changed:
             scheduler_ref.set(scheduler_data)
     res = session['res'] if 'res' in session else ''
-    if res == 'Please enter a valid date range':
+    if res:
         session.pop('res')
-        res = 'Please enter a valid date range'
+        # res = 'Please enter a valid date range'
     if form.validate_on_submit():
         session['startdate'] = form.startdate.data
         session['enddate'] = form.enddate.data
