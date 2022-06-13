@@ -28,17 +28,25 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
+const bool debug = false;
+
 void connect2Wifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to Wi-Fi");
+  if (debug) {
+    Serial.print("Connecting to Wi-Fi");
+  }
   while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
-    Serial.print(".");
+    if (debug) {
+      Serial.print(".");
+    }
     delay(300);
   }
-  Serial.println();
-  Serial.print("Connected with IP: ");
-  Serial.println(WiFi.localIP());
-  Serial.println();
+  if (debug) {
+    Serial.println();
+    Serial.print("Connected with IP: ");
+    Serial.println(WiFi.localIP());
+    Serial.println();
+  }
 }
 
 bool signupOK = false;
@@ -49,11 +57,15 @@ void connect2Firebase() {
 
   /* Sign up */
   if (Firebase.signUp(&config, &auth, "", "")){ //sign up to the database (can add credentials if needed)
-    Serial.println("ok");
+    if (debug) {
+      Serial.println("ok");
+    }
     signupOK = true;
   }
   else{ 
-    Serial.printf("%s\n", config.signer.signupError.message.c_str());
+    if (debug) {
+      Serial.printf("%s\n", config.signer.signupError.message.c_str());
+    }
   }
 
   /* Assign the callback function for the long running token generation task */
@@ -80,8 +92,10 @@ vector<string> getSensorsNames(string which) {
   if (Firebase.RTDB.getString(&fbdo, "sensors/")) {
     int sens_count = 0;
     string sensors_string = fbdo.to<string>();
-    Serial.print("sensors_string: ");
-    Serial.println(sensors_string.c_str());
+    if (debug) {
+      Serial.print("sensors_string: ");
+      Serial.println(sensors_string.c_str());
+    }
     int next_sensor_pos = 0;
     while (sensors_string.length() > 0) {
       if (which.compare("S1-5") == 0) {
@@ -98,9 +112,11 @@ vector<string> getSensorsNames(string which) {
       if (sensor[0] != 'S' && which.compare("all") != 0) {
         continue;
       }
-      Serial.print(sens_count);
-      Serial.print(" [DEBUG] sensor: ");
-      Serial.println(sensor.c_str());
+      if (debug) {
+        Serial.print(sens_count);
+        Serial.print(" [DEBUG] sensor: ");
+        Serial.println(sensor.c_str());
+      }
       if (sen_to_find && sensor.length() > 0) {
         sensors_ids.push_back(sensor);
       }
@@ -108,8 +124,10 @@ vector<string> getSensorsNames(string which) {
     }
   }
   else {
-    Serial.println("FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (debug) {
+      Serial.println("FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
   return sensors_ids;
 }
@@ -120,7 +138,6 @@ std::map<string, string> sensors_map;
 
 void setup() {
   Serial.begin(9600);
-  Serial2.begin(11500);
 
   // connect to the wifi
   connect2Wifi();
@@ -131,9 +148,11 @@ void setup() {
   sensors_names = getSensorsNames("all");
 
   for (int i = 0; i < sensors_names.size(); i++) {
-    Serial.print("Inserted: ");
-    Serial.print(sensors_names[i].c_str());
-    Serial.println(" to sensors_map");
+    if (debug) {
+      Serial.print("Inserted: ");
+      Serial.print(sensors_names[i].c_str());
+      Serial.println(" to sensors_map");
+    }
     sensors_map[sensors_names[i]] = "0";
   }
 }
@@ -149,8 +168,10 @@ time_t genCurrTime() {
     payload = http.getString();
   }
   else {
-    Serial.print("Error code: ");
-    Serial.println(httpResponseCode);
+    if (debug) {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
   }
   http.end();
   string date = payload.c_str();
@@ -182,23 +203,50 @@ vector<string> getSensorNameTime(string &ret_data) {
   curr_sensor += ret_data.substr(0, end_sensor_pos+1); 
   ret_data = ret_data.substr(end_sensor_pos+1);
   vector<string> res = {sensor_name, sensor_time, curr_sensor};
-  Serial.print("sensor_name: ");
-  Serial.print(sensor_name.c_str());
-  Serial.print("; sensor_time: ");
-  Serial.print(sensor_time.c_str());
-  Serial.print("; curr_sensor: ");
-  Serial.println(curr_sensor.c_str());
   return res;
 }
 
 
 time_t getSchedulerTime(string sched_time_str) {
   removeCharsFromString(sched_time_str, "{}\"");
-  Serial.print("sched_time_str: ");
-  Serial.println(sched_time_str.c_str());
+  if (debug) {
+    Serial.print("sched_time_str: ");
+    Serial.println(sched_time_str.c_str());
+  }
   struct tm sched_time;
   strptime(sched_time_str.c_str(), "%d-%m-%y %H:%M:%S", &sched_time);
   return mktime(&sched_time);
+}
+
+string divideRawString(string str) {
+  string res = "";
+  int col_pos = str.find(':');
+  string elem = str.substr(0, col_pos);
+  str = str.substr(col_pos+1);
+  removeCharsFromString(elem, "{\"}");
+  res += elem + ","; 
+  if (debug) {
+    Serial.print("divideRawString - str: ");
+    Serial.println(str.c_str());
+  }
+  while(str.find_first_of(':') != string::npos) {
+    int col_pos = str.find(string(":\""));
+    string elem = str.substr(0, col_pos);
+    if (debug) {
+      Serial.print("elem: ");
+      Serial.println(elem.c_str());
+    }
+    str = str.substr(col_pos+1);
+    if (debug) {
+      Serial.print("str: ");
+      Serial.println(str.c_str());
+    }
+    removeCharsFromString(elem, "{\"}");
+    res += elem + ","; 
+  }
+  removeCharsFromString(str, "{\"}");
+  res += str;
+  return res;
 }
 
 
@@ -224,16 +272,22 @@ void checkScheduler(time_t curr_time) {
           else {
             Firebase.RTDB.setArray(&fbdo, "scheduler/", scheduler_data_json);
           }
-          Serial.print("2 scheduler_data_json: ");
-          Serial.println(scheduler_data_json->raw());
+          if (debug) {
+            Serial.print("2 scheduler_data_json: ");
+            Serial.println(scheduler_data_json->raw());
+          }
           if (action.compare("off")!=0) {
             Firebase.RTDB.set(&fbdo, "/action", "off");
-            Serial.println("Turning system off!");
+            if (debug) {
+              Serial.println("Turning system off!");
+            }
           }
         }
         else if (difftime(curr_time, s_0) > 0 && action.compare("on")!=0) {
           Firebase.RTDB.set(&fbdo, "/action", "on");
-          Serial.println("Turning system on!");
+          if (debug) {
+            Serial.println("Turning system on!");
+          }
         }
       }
     }
@@ -244,14 +298,18 @@ void checkScheduler(time_t curr_time) {
 void checkAction() {
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
-    Serial.print("[DEBUG] action: ");
-    Serial.println(action.c_str());
+    if (debug) {
+      Serial.print("[DEBUG] action: ");
+      Serial.println(action.c_str());
+    }
     while (action.compare("off")==0) {
       time_t curr_time = genCurrTime();
       checkScheduler(curr_time);
       Firebase.RTDB.getString(&fbdo, "action/");
       action = fbdo.to<string>();
-      Serial.println("System is off!");
+      if (debug) {
+        Serial.println("System is off!");
+      }
       vTaskDelay(5000);
     }
   }
@@ -274,16 +332,20 @@ void loop() {
         vector<string> sensor_name_time = getSensorNameTime(ret_data);
         if (sensor_name_time[1].compare(sensors_map[sensor_name_time[0]]) != 0) {
           sensors_map[sensor_name_time[0]] = sensor_name_time[1];
-          ret_str += sensor_name_time[2] + " ";
+          string sensor_str = divideRawString(sensor_name_time[2]);
+          ret_str += sensor_str + "\n";
         } 
       }
-      Serial.print("ret_str: ");
-      Serial.println(ret_str.c_str());
-      Serial.println("PATH: " + fbdo.dataPath());
+      if (debug) {
+        Serial.print("ret_str: ");
+      }
+      Serial.print(ret_str.c_str());
     }
     else {
-      Serial.println("FAILED");
-      Serial.println("REASON: " + fbdo.errorReason());
+      if (debug) {
+        Serial.println("FAILED");
+        Serial.println("REASON: " + fbdo.errorReason());
+      }
     }
   }
 }

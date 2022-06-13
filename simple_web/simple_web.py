@@ -104,9 +104,12 @@ def backupDayData(day = None):
     columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
     df = pd.DataFrame(columns=columns_titles)
     if not day:
-        day = getCurrentTime()
-    start_day = day - datetime.timedelta(days=1)
-    print("backup in progress")
+        start_day = getCurrentTime()
+        print(f"start_day: {start_day}")
+    day = start_day + datetime.timedelta(days=1)
+    start_day = start_day.replace(hour=0, minute=0, second=0)
+    day = day.replace(hour=0, minute=0, second=0)
+    print(f"backup in progress, start: {start_day} - end: {day}")
     generateDF(start_day, day, df, backup=True)
     start_day_str = start_day.strftime("%d_%m_%y")
     new_csv_filename = backup_path + "backup_" + start_day_str + ".csv"
@@ -205,7 +208,7 @@ def addScheduleAux(start_date, end_date):
 
 
 backup_sched = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
-backup_sched.add_job(backupDayData, trigger='cron', hour='0')
+backup_sched.add_job(backupDayData, trigger='cron', hour='8', minute='10,11')
 backup_sched.start()
 
 

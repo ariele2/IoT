@@ -193,15 +193,33 @@ unsigned long recvDataPrevMillis = 0;
 void loop() {
   checkAction();
   if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
+    string res = string("");
     recvDataPrevMillis = millis(); 
+    String rec_data = Serial2.readString();
     Serial.print("Recieved: ");
-    Serial.println(Serial2.readString());
-    char buf[50];
-    Serial2.readString().toCharArray(buf, 50);
-    string res = buf;
-    bool recieved_data = res.compare("in") != 0 && res.compare("out") != 0;
-    if (Firebase.ready() && signupOK && recieved_data) {  
+    Serial.println(rec_data);
+    char buf[50] = "";
+    rec_data.toCharArray(buf, 50);
+    res = buf;
+    if (res.find("out") != string::npos) {
+      res = string("out");
+      if (res.find("in") != string::npos) {
+        if (res.find("in") > res.find("out")) {
+          res = string("out");
+        }
+        else {
+          res = string("in");
+        }
+      }
+    }
+    else if (res.find("in") != string::npos) {
+      res = string("in");
+    }
+    Serial.print("res to cloud: ");
+    Serial.println(res.c_str());
+    if (Firebase.ready() && signupOK && (res.compare("in") == 0 || res.compare("out") == 0)) {  
       updateDB(res);
+      res = string("");
     }
   }
 }

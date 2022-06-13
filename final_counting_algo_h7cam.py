@@ -51,7 +51,7 @@ while(True):
     # add a 1 second delay between each capturing of NUM_OF_FRAMES,
     deadline_in = ticks_add(time.ticks_ms(), 1000)
     while frame_num<NUM_OF_FRAMES and ticks_diff(deadline_in, time.ticks_ms()) > 0:
-        blobs = img.find_blobs(thresholds, roi=(154,25,120,110), pixels_threshold=150)
+        blobs = img.find_blobs(thresholds, roi=(68,60,120,116), pixels_threshold=150)
         if blobs:
             captured_blob = blobs[0]
             # add the central x of the blob to the captured frames cx array
@@ -78,13 +78,13 @@ while(True):
             print("calculated: ", dist_frames, "; sum = ", sum(dist_frames))
         if sum(dist_frames) >= MOVEMENT_LIMIT:
             print("Someone entered!")
-            uart.write("out")
-            counter -= 1
-        elif sum(dist_frames) <= -MOVEMENT_LIMIT:
-            print("Someone exited!")
             uart.write("in")
             counter += 1
-    sensor.skip_frames(time = 1050)
+        elif sum(dist_frames) <= -MOVEMENT_LIMIT:
+            print("Someone exited!")
+            uart.write("out")
+            counter -= 1
+    sensor.skip_frames(time = 750)
 
     print("Currently inside: ", counter)
     if debuge_mode:

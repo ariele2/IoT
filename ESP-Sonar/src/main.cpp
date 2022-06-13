@@ -38,11 +38,11 @@
 #define TRIG_PIN5 26
 #define ECHO_PIN5 27
 
-#define SITTING_DISTANCE1 50
-#define SITTING_DISTANCE2 50
+#define SITTING_DISTANCE1 35
+#define SITTING_DISTANCE2 33
 #define SITTING_DISTANCE3 50
-#define SITTING_DISTANCE4 50
-#define SITTING_DISTANCE5 50
+#define SITTING_DISTANCE4 35
+#define SITTING_DISTANCE5 35
 
 #define ERROR_VEC_LEN 5 // error vec holds the last sitting events (yes/no/error)
 #define FIREBASE_TIME_INTERVAL 2000 // time interval to send data for the firebase in ms
@@ -231,6 +231,8 @@ vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int t
   digitalWrite(trig_pin, LOW);
   unsigned long duration = pulseIn(echo_pin, HIGH);
   distance = (duration/2) / 29.1;
+  Serial.print("distance measured: ");
+  Serial.println(distance);
   if (distance < sitting_distance) {
     sensor_counter++;
   }

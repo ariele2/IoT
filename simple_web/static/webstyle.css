@@ -67,6 +67,15 @@ h1 {
     color: black;
 }
 
+#welcome {
+    font-family: 'Kreon', serif;
+    text-align: left;
+}
+
+#offcanvasIndexLabel{
+    text-align: center;
+}
+
 .col-xs-12, .col-xs-5, .col-xs-2 {
     margin-top: 3% !important;
 }
