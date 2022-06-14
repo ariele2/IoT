@@ -11,7 +11,7 @@
             <th scope="col">#</th>
             <th scope="col">ID</th>
             <th scope="col">Status</th>
-            <th scope="col">Reason</th>
+            <th scope="col">Data</th>
           </tr>
         </thead>
         <tbody>
@@ -21,6 +21,7 @@
             <td>{{sensor}}</td>
             {% if data == 1 %}
             <td class="table-success">Active</td>
+            <td> {{data_sensors[loop.index-1]}} </td>
             {% elif data == 0 %}
             <td class="table-warning">InActive</td>
             <td> Didn't report back in a while </td>

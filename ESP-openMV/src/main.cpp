@@ -79,13 +79,12 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
-
 }
 
 
 String serverPath = "http://just-the-time.appspot.com/";
 
-string genCurrTime() {
+string genCurrTimeStr() {
   HTTPClient http;
   http.begin(serverPath.c_str());
   int httpResponseCode = http.GET();
@@ -115,7 +114,6 @@ string genCurrTime() {
   return buffer_s;
 }
 
-
 string int2str(int num) {
   ostringstream temp;
   temp << num;
@@ -129,16 +127,84 @@ void removeCharsFromString(string &str, char* charsToRemove) {
    }
 }
 
+time_t getSchedulerTime(string sched_time_str) {
+  removeCharsFromString(sched_time_str, "{}\"");
+  struct tm sched_time;
+  strptime(sched_time_str.c_str(), "%d-%m-%y %H:%M:%S", &sched_time);
+  return mktime(&sched_time);
+}
+
+void checkScheduler(time_t curr_time) {
+  if (Firebase.RTDB.getArray(&fbdo, "scheduler/")) {
+    FirebaseJsonArray *scheduler_data_json = fbdo.to<FirebaseJsonArray*>();
+    FirebaseJsonData curr_sched;
+    scheduler_data_json->get(curr_sched, 0);
+    if (curr_sched.success) {
+      string curr_sched_s = curr_sched.to<string>();
+      int m_pos = curr_sched_s.find("\":");
+      string start_sched_s = curr_sched_s.substr(0, m_pos);
+      string end_sched_s = curr_sched_s.substr(m_pos+3);
+      time_t s_0 = getSchedulerTime(start_sched_s);
+      time_t e_0 = getSchedulerTime(end_sched_s);
+      if (Firebase.RTDB.getString(&fbdo, "action/")) {
+        string action = fbdo.to<string>();
+        if (difftime(curr_time, e_0) > 0) {
+          scheduler_data_json->remove(0);
+          if (scheduler_data_json->size() == 0) {
+            Firebase.RTDB.deleteNode(&fbdo, "scheduler/");
+          }
+          else {
+            Firebase.RTDB.setArray(&fbdo, "scheduler/", scheduler_data_json);
+          }
+          if (action.compare("off")!=0) {
+            Firebase.RTDB.set(&fbdo, "/action", "off");
+            Serial.println("Turning system off!");
+          }
+        }
+        else if (difftime(curr_time, s_0) > 0 && action.compare("on")!=0) {
+          Firebase.RTDB.set(&fbdo, "/action", "on");
+          Serial.println("Turning system on!");
+        }
+      }
+    }
+  }
+}
+
+time_t genCurrTime() {
+  HTTPClient http;
+  http.begin(serverPath.c_str());
+  int httpResponseCode = http.GET();
+  String payload;
+  if (httpResponseCode > 0) {
+    payload = http.getString();
+  }
+  else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+  http.end();
+  string date = payload.c_str();
+  string year = date.substr(2,2);
+  string month = date.substr(5,2);
+  string day = date.substr(8,2);
+  string hour = date.substr(11);
+  string formated_date = day + "-" + month + "-" + year + " " + hour;
+  struct tm timeinfo;
+  strptime(formated_date.c_str(), "%d-%m-%y %H:%M:%S", &timeinfo);
+  timeinfo.tm_hour += 3; // Align to Israel clock
+  time_t c_time = mktime(&timeinfo);
+  return c_time;
+}
 
 void checkAction() {
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
-    Serial.print("[DEBUG] action: ");
-    Serial.println(action.c_str());
     while (action.compare("off")==0) {
+      time_t curr_time = genCurrTime();
+      checkScheduler(curr_time);
       Firebase.RTDB.getString(&fbdo, "action/");
       action = fbdo.to<string>();
-      Serial.println("System is off!");
+        Serial.println("System is off!");
       vTaskDelay(5000);
     }
   }
@@ -146,7 +212,7 @@ void checkAction() {
 
 
 void updateDB(string value) {
-  string curr_time = genCurrTime();
+  string curr_time = genCurrTimeStr();
   Serial.print("[DEBUG] curr_time: ");
   Serial.println(curr_time.c_str());
   int call_id = 0;

@@ -275,11 +275,24 @@ def getStatus():
     # query the real_data from the realtime db
     real_data = real_data_ref.get()
     print("[DEBUG] real_data: ", real_data)
+    data_sensors = []
     curr_time = datetime.datetime.now()
     active_delta = datetime.timedelta(minutes=3)    # time that passed until asensor is inactive
     for sensor in active_sensors.keys():
         if sensor not in real_data:
             continue
+        if sensor.startswith('S'):
+            if real_data[sensor]["value"] == 'YES':
+                data_sensors.append("Someone is sitting")
+            else:
+                data_sensors.append("No one is sitting")
+        elif sensor.startswith('D'):
+            if real_data[sensor]["value"] == 'in':
+                data_sensors.append("Someone entered")
+            else:
+                data_sensors.append("Someone exited")
+        else:
+            data_sensors.append("Captured " + real_data[sensor]["value"] + " people")
         sensor_last_update_time = datetime.datetime.strptime(real_data[sensor]["time"], "%d-%m-%y %H:%M:%S")
         print("[DEBUG] sensor_last_update_time - curr_time: ", sensor_last_update_time - curr_time)
         if (sensor_last_update_time + active_delta >= curr_time):
@@ -293,7 +306,7 @@ def getStatus():
             active_sensors[sensor] = 0
     # pass the list to the return
     # loop through it in the html with JINGA and update the active sensors
-    return render_template("status.html", active_sensors=active_sensors)
+    return render_template("status.html", active_sensors=active_sensors, data_sensors=data_sensors)
 
 
 @app.route("/sensors",  methods=['GET','POST'])

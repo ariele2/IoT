@@ -38,14 +38,20 @@
 #define TRIG_PIN5 26
 #define ECHO_PIN5 27
 
-#define SITTING_DISTANCE1 35
-#define SITTING_DISTANCE2 33
-#define SITTING_DISTANCE3 50
-#define SITTING_DISTANCE4 35
-#define SITTING_DISTANCE5 35
+// S1-5
+#define SITTING_DISTANCE1 70
+#define SITTING_DISTANCE2 70
+#define SITTING_DISTANCE3 60
+#define SITTING_DISTANCE4 70
+#define SITTING_DISTANCE5 70
+// S6-10
+// #define SITTING_DISTANCE1 47
+// #define SITTING_DISTANCE2 50
+// #define SITTING_DISTANCE3 65
+// #define SITTING_DISTANCE4 50
+// #define SITTING_DISTANCE5 50
 
-#define ERROR_VEC_LEN 5 // error vec holds the last sitting events (yes/no/error)
-#define FIREBASE_TIME_INTERVAL 2000 // time interval to send data for the firebase in ms
+#define FIREBASE_TIME_INTERVAL 3000 // time interval to send data for the firebase in ms
 
 
 using namespace std;
@@ -167,7 +173,7 @@ void setup() {
   // connect to firebase
   connect2Firebase();
 
-  vector<string> sensors_ids = getSensorsNames("S6-10");
+  vector<string> sensors_ids = getSensorsNames("S1-5");
 
   // {sensorID:{TRIG_PIN,ECHO_PIN,counter,total distance, sitting_distance}
   vector<int> vec_s01 = {TRIG_PIN1, ECHO_PIN1, 0, 0, SITTING_DISTANCE1};
@@ -181,7 +187,7 @@ void setup() {
 
 String serverPath = "http://just-the-time.appspot.com/";
 
-string genCurrTime() {
+string genCurrTimeStr() {
   HTTPClient http;
   http.begin(serverPath.c_str());
   int httpResponseCode = http.GET();
@@ -261,7 +267,7 @@ string isSitting(int counter, int tot_distance) {
 
 
 void updateDB(string sensorID, vector<int> sensor_data) {
-  string curr_time = genCurrTime();
+  string curr_time = genCurrTimeStr();
   Serial.print("[DEBUG] curr_time: ");
   Serial.println(curr_time.c_str());
   string sitting = isSitting(sensor_data[2], sensor_data[3]);
@@ -303,16 +309,84 @@ void updateDB(string sensorID, vector<int> sensor_data) {
   }
 }
 
+time_t getSchedulerTime(string sched_time_str) {
+  removeCharsFromString(sched_time_str, "{}\"");
+  struct tm sched_time;
+  strptime(sched_time_str.c_str(), "%d-%m-%y %H:%M:%S", &sched_time);
+  return mktime(&sched_time);
+}
+
+void checkScheduler(time_t curr_time) {
+  if (Firebase.RTDB.getArray(&fbdo, "scheduler/")) {
+    FirebaseJsonArray *scheduler_data_json = fbdo.to<FirebaseJsonArray*>();
+    FirebaseJsonData curr_sched;
+    scheduler_data_json->get(curr_sched, 0);
+    if (curr_sched.success) {
+      string curr_sched_s = curr_sched.to<string>();
+      int m_pos = curr_sched_s.find("\":");
+      string start_sched_s = curr_sched_s.substr(0, m_pos);
+      string end_sched_s = curr_sched_s.substr(m_pos+3);
+      time_t s_0 = getSchedulerTime(start_sched_s);
+      time_t e_0 = getSchedulerTime(end_sched_s);
+      if (Firebase.RTDB.getString(&fbdo, "action/")) {
+        string action = fbdo.to<string>();
+        if (difftime(curr_time, e_0) > 0) {
+          scheduler_data_json->remove(0);
+          if (scheduler_data_json->size() == 0) {
+            Firebase.RTDB.deleteNode(&fbdo, "scheduler/");
+          }
+          else {
+            Firebase.RTDB.setArray(&fbdo, "scheduler/", scheduler_data_json);
+          }
+          if (action.compare("off")!=0) {
+            Firebase.RTDB.set(&fbdo, "/action", "off");
+            Serial.println("Turning system off!");
+          }
+        }
+        else if (difftime(curr_time, s_0) > 0 && action.compare("on")!=0) {
+          Firebase.RTDB.set(&fbdo, "/action", "on");
+          Serial.println("Turning system on!");
+        }
+      }
+    }
+  }
+}
+
+time_t genCurrTime() {
+  HTTPClient http;
+  http.begin(serverPath.c_str());
+  int httpResponseCode = http.GET();
+  String payload;
+  if (httpResponseCode > 0) {
+    payload = http.getString();
+  }
+  else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+  http.end();
+  string date = payload.c_str();
+  string year = date.substr(2,2);
+  string month = date.substr(5,2);
+  string day = date.substr(8,2);
+  string hour = date.substr(11);
+  string formated_date = day + "-" + month + "-" + year + " " + hour;
+  struct tm timeinfo;
+  strptime(formated_date.c_str(), "%d-%m-%y %H:%M:%S", &timeinfo);
+  timeinfo.tm_hour += 3; // Align to Israel clock
+  time_t c_time = mktime(&timeinfo);
+  return c_time;
+}
 
 void checkAction() {
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
-    Serial.print("[DEBUG] action: ");
-    Serial.println(action.c_str());
     while (action.compare("off")==0) {
+      time_t curr_time = genCurrTime();
+      checkScheduler(curr_time);
       Firebase.RTDB.getString(&fbdo, "action/");
       action = fbdo.to<string>();
-      Serial.println("System is off!");
+        Serial.println("System is off!");
       vTaskDelay(5000);
     }
   }
@@ -321,8 +395,6 @@ void checkAction() {
 
 unsigned long sendDataPrevMillis = 0;
 void loop() {
-  Serial.println("[DEBUG] main loop ");
-  Serial.println("[DEBUG] check action stage ");
   // check if system is on
   checkAction();
   Serial.println("[DEBUG] check action finished ");
