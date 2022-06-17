@@ -51,7 +51,9 @@
 // #define SITTING_DISTANCE4 50
 // #define SITTING_DISTANCE5 50
 
-#define FIREBASE_TIME_INTERVAL 3000 // time interval to send data for the firebase in ms
+#define PULL_SENSORS_DATA_TIME 10000
+#define FIREBASE_TIME_INTERVAL 2000 // time interval to send data for the firebase in ms
+#define WIFI_CHECK_INTERVAL 1000*60*5  // 5 minutes interval  
 
 
 using namespace std;
@@ -217,7 +219,6 @@ string genCurrTimeStr() {
   return buffer_s;
 }
 
-
 int tot_count = 0; // depends on the loops iteration we provide
 
 string int2str(int num) {
@@ -225,7 +226,6 @@ string int2str(int num) {
   temp << num;
   return temp.str();
 }
-
 
 // calculates counter for each sensor
 vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int tot_distance, int sitting_distance) {
@@ -250,7 +250,6 @@ vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int t
   return res;
 }
 
-
 string isSitting(int counter, int tot_distance) {
   string sitting = "";
   if (counter > 0) {
@@ -264,7 +263,6 @@ string isSitting(int counter, int tot_distance) {
   }
   return sitting;
 }
-
 
 void updateDB(string sensorID, vector<int> sensor_data) {
   string curr_time = genCurrTimeStr();
@@ -309,104 +307,42 @@ void updateDB(string sensorID, vector<int> sensor_data) {
   }
 }
 
-time_t getSchedulerTime(string sched_time_str) {
-  removeCharsFromString(sched_time_str, "{}\"");
-  struct tm sched_time;
-  strptime(sched_time_str.c_str(), "%d-%m-%y %H:%M:%S", &sched_time);
-  return mktime(&sched_time);
+void checkWifiConnection() {
+  if ((Wifi.status() != WL_CONNECTED )) {
+    Wifi.disconnect();
+    Serial.println("Reconnecting Wifi...");
+    Wifi.reconnect();
+    vTaskDelay(5000);
+  }
 }
 
-void checkScheduler(time_t curr_time) {
-  if (Firebase.RTDB.getArray(&fbdo, "scheduler/")) {
-    FirebaseJsonArray *scheduler_data_json = fbdo.to<FirebaseJsonArray*>();
-    FirebaseJsonData curr_sched;
-    scheduler_data_json->get(curr_sched, 0);
-    if (curr_sched.success) {
-      string curr_sched_s = curr_sched.to<string>();
-      int m_pos = curr_sched_s.find("\":");
-      string start_sched_s = curr_sched_s.substr(0, m_pos);
-      string end_sched_s = curr_sched_s.substr(m_pos+3);
-      time_t s_0 = getSchedulerTime(start_sched_s);
-      time_t e_0 = getSchedulerTime(end_sched_s);
-      if (Firebase.RTDB.getString(&fbdo, "action/")) {
-        string action = fbdo.to<string>();
-        if (difftime(curr_time, e_0) > 0) {
-          scheduler_data_json->remove(0);
-          if (scheduler_data_json->size() == 0) {
-            Firebase.RTDB.deleteNode(&fbdo, "scheduler/");
-          }
-          else {
-            Firebase.RTDB.setArray(&fbdo, "scheduler/", scheduler_data_json);
-          }
-          if (action.compare("off")!=0) {
-            Firebase.RTDB.set(&fbdo, "/action", "off");
-            Serial.println("Turning system off!");
-          }
-        }
-        else if (difftime(curr_time, s_0) > 0 && action.compare("on")!=0) {
-          Firebase.RTDB.set(&fbdo, "/action", "on");
-          Serial.println("Turning system on!");
-        }
+void checkAction() {
+  unsigned long checkWifiPrevMillis = 0;
+  checkWifiConnection();
+  if (Firebase.RTDB.getString(&fbdo, "action/")) {
+    string action = fbdo.to<string>();
+    while (action.compare("off")==0) {
+      Firebase.RTDB.getString(&fbdo, "action/");
+      action = fbdo.to<string>();
+      Serial.println("System is off!");
+      vTaskDelay(5000);
+      if ((millis() - checkWifiPrevMillis > WIFI_CHECK_INTERVAL || checkWifiPrevMillis == 0 )) {
+        checkWifiConnection();
+        checkWifiPrevMillis = millis();
       }
     }
   }
 }
 
-time_t genCurrTime() {
-  HTTPClient http;
-  http.begin(serverPath.c_str());
-  int httpResponseCode = http.GET();
-  String payload;
-  if (httpResponseCode > 0) {
-    payload = http.getString();
-  }
-  else {
-    Serial.print("Error code: ");
-    Serial.println(httpResponseCode);
-  }
-  http.end();
-  string date = payload.c_str();
-  string year = date.substr(2,2);
-  string month = date.substr(5,2);
-  string day = date.substr(8,2);
-  string hour = date.substr(11);
-  string formated_date = day + "-" + month + "-" + year + " " + hour;
-  struct tm timeinfo;
-  strptime(formated_date.c_str(), "%d-%m-%y %H:%M:%S", &timeinfo);
-  timeinfo.tm_hour += 3; // Align to Israel clock
-  time_t c_time = mktime(&timeinfo);
-  return c_time;
-}
-
-void checkAction() {
-  if (Firebase.RTDB.getString(&fbdo, "action/")) {
-    string action = fbdo.to<string>();
-    while (action.compare("off")==0) {
-      time_t curr_time = genCurrTime();
-      checkScheduler(curr_time);
-      Firebase.RTDB.getString(&fbdo, "action/");
-      action = fbdo.to<string>();
-        Serial.println("System is off!");
-      vTaskDelay(5000);
-    }
-  }
-}
-
-
 unsigned long sendDataPrevMillis = 0;
 void loop() {
-  // check if system is on
+  // check if system is on and connected to wifi
   checkAction();
   Serial.println("[DEBUG] check action finished ");
   Serial.println();
   // loop through the sensors and get distance data
   unsigned long pull_data_time = millis();
-  Serial.println("[DEBUG] calculating how many times someone signaled as sit stage ");
-  while(pull_data_time + 10000 > millis()) { // get data from sensors in 2 seconds
-    Serial.print("[DEBUG] millis: ");
-    Serial.println(millis());
-    Serial.print("[DEBUG] pull_data_time: ");
-    Serial.println(pull_data_time);
+  while(pull_data_time + PULL_SENSORS_DATA_TIME > millis()) { // get data from sensors for xx seconds
     for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and get data for each of them
       Serial.print("[DEBUG] sensorID: ");
       Serial.print((it->first).c_str());

@@ -75,24 +75,6 @@ def set_system_time():
     os.system("sudo date -s \'" + year + "-" + month + "-" + day + " " + times + "\'") 
 
 
-def checkScheduler(curr_time):
-	scheduler_ref = db.reference("/scheduler")
-	scheduler_data = scheduler_ref.get()
-	print(f"scheduler_data: {scheduler_data}")
-	if scheduler_data:
-		s, e = list(scheduler_data[0].items())[0]
-		s_p = datetime.datetime.strptime(s, "%d-%m-%y %H:%M:%S")
-		e_p = datetime.datetime.strptime(e, "%d-%m-%y %H:%M:%S")
-		if curr_time > e_p:
-			scheduler_data.pop(0)
-			scheduler_ref.set(scheduler_data)
-			if action_ref.get() != 'off':
-				action_ref.set("off")
-				print(f"Turning system off!")
-		elif curr_time > s_p and action_ref.get() != 'on':
-			action_ref.set("on")
-			print(f"Turning system on!")
-
 ap = argparse.ArgumentParser()
 ap.add_argument("-d", "--dir", required=True,
 	help="path to input image")
@@ -144,11 +126,8 @@ while(True):
 	# validate that the system is on
 	action_data = action_ref.get()
 
-	checkScheduler(curr_time)
-
 	while action_data == 'off':
 		curr_time = datetime.datetime.strptime(get_current_time(), "%d-%m-%y %H:%M:%S")
-		checkScheduler(curr_time)
 		time.sleep(5)
 		action_data = action_ref.get()
 		print('System is off!')
