@@ -176,6 +176,17 @@ def generateCSVAux(start_date, end_date):
     # generate a download url and return it
     return blob.public_url
 
+bg_sched = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
+bg_sched.add_job(backupDayData, trigger='cron', hour='0')
+bg_sched.start()
+
+def schedUpdate(action):
+    print(f"Sched Update to: {action}")
+    action_data = action_ref.get()
+    if action_data == "off" and action == 'on':
+        action_ref.set("on")
+    elif action_data == 'on' and action == 'off':
+        action_ref.set("off")
 
 def addScheduleAux(start_date, end_date):
     try:
@@ -205,11 +216,9 @@ def addScheduleAux(start_date, end_date):
                 insert_index += 1
     scheduler_data.insert(insert_index, {start_date:end_date})
     scheduler_ref.set(scheduler_data)
-
-
-backup_sched = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
-backup_sched.add_job(backupDayData, trigger='cron', hour='8', minute='10,11')
-backup_sched.start()
+    # add a background schedule to start and stop according to the new date
+    bg_sched.add_job(schedUpdate, run_date=start_date_p, args=["on"])
+    bg_sched.add_job(schedUpdate, run_date=end_date_p, args=["off"])
 
 
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
