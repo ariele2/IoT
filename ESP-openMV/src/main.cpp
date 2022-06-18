@@ -196,6 +196,26 @@ void updateDB(string value) {
   }
 }
 
+
+string fixReceivedData(string res) {
+  if (res.find("out") != string::npos) {
+      res = string("out");
+      if (res.find("in") != string::npos) {
+        if (res.find("in") > res.find("out")) {
+          res = string("out");
+        }
+        else {
+          res = string("in");
+        }
+      }
+    }
+    else if (res.find("in") != string::npos) {
+      res = string("in");
+  }
+  return res;
+}
+
+
 unsigned long recvDataPrevMillis = 0;
 
 void loop() {
@@ -209,20 +229,7 @@ void loop() {
     char buf[50] = "";
     rec_data.toCharArray(buf, 50);
     res = buf;
-    if (res.find("out") != string::npos) {
-      res = string("out");
-      if (res.find("in") != string::npos) {
-        if (res.find("in") > res.find("out")) {
-          res = string("out");
-        }
-        else {
-          res = string("in");
-        }
-      }
-    }
-    else if (res.find("in") != string::npos) {
-      res = string("in");
-    }
+    res = fixReceivedData();
     Serial.print("res to cloud: ");
     Serial.println(res.c_str());
     if (Firebase.ready() && signupOK && (res.compare("in") == 0 || res.compare("out") == 0)) {  
