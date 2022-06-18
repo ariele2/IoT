@@ -14,40 +14,6 @@ from time import ctime
 from urllib.request import urlopen
 
 
-
-def get_input(message, channel):
-    response = input(message)
-    channel.put(response)
-
-
-def input_with_timeout(message, timeout):
-    channel = queue.Queue()
-    message = message + " [{} sec timeout] ".format(timeout)
-    thread = threading.Thread(target=get_input, args=(message, channel))
-    # by setting this as a daemon thread, python won't wait for it to complete
-    thread.daemon = True
-    thread.start()
-
-    try:
-        response = channel.get(True, timeout)
-        return response
-    except queue.Empty:
-        pass
-    return None
-	
-debug_Mode = True
-time_between_frame = 5
-exit_command = False
-time_to_exit = 5
-if exit_command:
-	command = input_with_timeout("Commands:", time_to_exit)
-	time.sleep(time_to_exit)
-	if( command == 'exit'):
-		print (command)
-		exit(0)
-	print (command)
-
-
 def get_current_time():
 	res = urlopen('http://just-the-time.appspot.com/')
 	result = res.read().strip()
@@ -82,6 +48,7 @@ ap.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3,
 	help="threshold when applying non-maxima suppression")
+ap.add_argument("-debug", action="store_true")
 args = vars(ap.parse_args())
 
 # load the COCO class labels our YOLO model was trained on
@@ -99,14 +66,14 @@ np.random.seed(42)
 COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),
 	dtype="uint8")
 
-if debug_Mode:
+if args["debug"]:
 	print("[DEBUG]: COLORS = ", COLORS)
 
 # derive the paths to the YOLO weights and model configuration
 weightsPath = os.path.sep.join([dirPath, "yolo-coco", "yolov3.weights"])
 configPath = os.path.sep.join([dirPath, "yolo-coco", "yolov3.cfg"])
 # load our YOLO object detector trained on COCO dataset (80 classes)
-if debug_Mode:
+if args["debug"]:
 	print("[INFO] loading YOLO from disk...")
 net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
@@ -119,6 +86,7 @@ data_ref = db.reference('/data')
 real_data_ref = db.reference('/real_data')
 caller_ref = db.reference('/call_id')
 sensorID = "V-01"
+time_between_frame = 5
 # make a while loop that works every 30 secs
 while(True):
 	curr_machine_time = time.time()
@@ -148,22 +116,20 @@ while(True):
 		# construct a blob from the input image and then perform a forward
 		# pass of the YOLO object detector, giving us our bounding boxes and
 		# associated probabilities
-		blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (256, 256),	# changed from 416 to 256 reduces time *2
+		blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416),	# changed from 416 to 256 reduces time *2
 			swapRB=True, crop=False)
 		net.setInput(blob)
 		start = time.time()
 		layerOutputs = net.forward(ln)
 		end = time.time()
 		# show timing information on YOLO
-		if debug_Mode:
+		if args["debug"]:
 			print("[INFO] YOLO took {:.6f} seconds".format(end - start))
-
 		# initialize our lists of detected bounding boxes, confidences, and
 		# class IDs, respectively
 		boxes = []
 		confidences = []
 		classIDs = []
-
 		# loop over each of the layer outputs
 		for output in layerOutputs:
 			# loop over each of the detections
@@ -191,7 +157,7 @@ while(True):
 					boxes.append([x, y, int(width), int(height)])
 					confidences.append(float(confidence))
 					classIDs.append(classID)
-		if debug_Mode:
+		if args["debug"]:
 			print("[DEBUG] Finished for output in layerOutputs")
 		# apply non-maxima suppression to suppress weak, overlapping bounding
 		# boxes
@@ -202,7 +168,7 @@ while(True):
 		# ensure at least one detection exists
 		if len(idxs) > 0:
 			# loop over the indexes we are keeping 
-			if debug_Mode:
+			if args["debug"]:
 				print("[DEBUG] len(idxs) = ", len(idxs))
 				print("[DEBUG] ClassIDs = ", classIDs)
 			for i in idxs.flatten():
@@ -210,7 +176,7 @@ while(True):
 				(x, y) = (boxes[i][0], boxes[i][1])
 				(w, h) = (boxes[i][2], boxes[i][3])
 				# draw a bounding box rectangle and label on the image
-				if debug_Mode:
+				if args["debug"]:
 					print("[DEBUG] ClassID = ", classID)
 				if classIDs[i] <= 2:
 					color = [int(c) for c in COLORS[classIDs[i]]]
@@ -219,7 +185,7 @@ while(True):
 					cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
 						0.5, color, 2)
 
-					if confidences[i] > 0.9 and debug_Mode:
+					if confidences[i] > 0.9 and args["debug"]:
 						print(confidences[i])
 				else:
 					count_error = count_error + 1
@@ -235,7 +201,7 @@ while(True):
 		data_ref.update(insert_data) 
 		caller_ref.update({sensorID:call_id+1})
 		real_data_ref.update(insert_real_data)
-		if debug_Mode:
+		if args["debug"]:
 			cv2.imshow("Image"+str(curr_machine_time), image)
 			cv2.waitKey(2000)
 			cv2.destroyAllWindows()
