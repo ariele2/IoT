@@ -136,18 +136,20 @@ void checkWifiConnection() {
 }
 
 void checkAction() {
-  unsigned long checkWifiPrevMillis = 0;
+  unsigned long prevMillis, wifiPrevMillis = 0;
   checkWifiConnection();
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
     while (action.compare("off")==0) {
-      Firebase.RTDB.getString(&fbdo, "action/");
-      action = fbdo.to<string>();
-      Serial.println("System is off!");
-      vTaskDelay(5000);
-      if ((millis() - checkWifiPrevMillis > WIFI_CHECK_INTERVAL || checkWifiPrevMillis == 0 )) {
+      if (millis() - prevMillis > 5000 || prevMillis == 0) {
+        Firebase.RTDB.getString(&fbdo, "action/");
+        action = fbdo.to<string>();
+        Serial.println("System is off!");
+        prevMillis = millis();
+      }
+      if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
         checkWifiConnection();
-        checkWifiPrevMillis = millis();
+        wifiPrevMillis = millis();
       }
     }
   }
