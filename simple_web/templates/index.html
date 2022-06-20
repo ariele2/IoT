@@ -84,7 +84,7 @@
     $('#schedule_timer').countdown('{{sched_time}}', function(event) {
         $(this).html(event.strftime('%D days %H:%M:%S'));
     }).on('finish.countdown', function() {
-        location.href='/updateDB';
+        location.reload();
     });
 </script>
 {% endblock %}
