@@ -128,8 +128,10 @@ def updateDB():
     action_data = action_ref.get()
     if action_data == "off":
         action_ref.set("on")
+        print(f"updateDB - turning on")
         return "on"
     action_ref.set("off")
+    print(f"updateDB - turning off")
     return "off"
 
 
@@ -304,7 +306,7 @@ def getStatus():
         else:
             data_sensors.append("Captured " + real_data[sensor]["value"] + " people")
         sensor_last_update_time = datetime.datetime.strptime(real_data[sensor]["time"], "%d-%m-%y %H:%M:%S")
-        print("[DEBUG] sensor_last_update_time - curr_time: ", sensor_last_update_time - curr_time)
+        # print("[DEBUG] sensor_last_update_time - curr_time: ", sensor_last_update_time - curr_time)
         if (sensor_last_update_time + active_delta >= curr_time):
             if real_data[sensor]["value"] == "ERROR":
                 active_sensors[sensor] = 2
