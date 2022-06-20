@@ -137,17 +137,25 @@ void checkWifiConnection() {
 }
 
 void checkAction() {
-  unsigned long prevMillis, wifiPrevMillis = 0;
+  unsigned long prevMillis = 0, wifiPrevMillis = 0;
   checkWifiConnection();
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
     while (action.compare("off")==0) {
       if (millis() - prevMillis > 5000 || prevMillis == 0) {
         if (Firebase.RTDB.getString(&fbdo, "action/")) {
+          Serial.print("Getting action... ");
           action = fbdo.to<string>();
         }
-      prevMillis = millis();
-      Serial.println("System is off!");
+        else {
+          Serial.println("Cannot gather information");
+          Serial.print("Wifi status: ");
+          Serial.println(WiFi.status());
+        }
+        prevMillis = millis();
+        Serial.print("action = ");
+        Serial.print(action.c_str());
+        Serial.println(" - system is off!");
       }
       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
         checkWifiConnection();
@@ -203,7 +211,7 @@ void updateDB(string value) {
 
 string fixReceivedData(string res) {
   if (res.find("out") != string::npos) {
-      res = string("out");
+      res = string("OUT");
       if (res.find("in") != string::npos) {
         if (res.find("in") > res.find("out")) {
           res = string("OUT");

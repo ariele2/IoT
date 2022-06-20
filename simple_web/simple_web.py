@@ -299,7 +299,7 @@ def getStatus():
             else:
                 data_sensors.append("No one is sitting")
         elif sensor.startswith('D'):
-            if real_data[sensor]["value"] == 'in':
+            if real_data[sensor]["value"] == 'IN':
                 data_sensors.append("Someone entered")
             else:
                 data_sensors.append("Someone exited")
