@@ -204,15 +204,15 @@ string fixReceivedData(string res) {
       res = string("out");
       if (res.find("in") != string::npos) {
         if (res.find("in") > res.find("out")) {
-          res = string("out");
+          res = string("OUT");
         }
         else {
-          res = string("in");
+          res = string("IN");
         }
       }
     }
     else if (res.find("in") != string::npos) {
-      res = string("in");
+      res = string("IN");
   }
   return res;
 }
@@ -234,7 +234,7 @@ void loop() {
     res = fixReceivedData(res);
     Serial.print("res to cloud: ");
     Serial.println(res.c_str());
-    if (Firebase.ready() && signupOK && (res.compare("in") == 0 || res.compare("out") == 0)) {  
+    if (Firebase.ready() && signupOK && (res.compare("IN") == 0 || res.compare("OUT") == 0)) {  
       updateDB(res);
       res = string("");
     }
