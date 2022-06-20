@@ -187,6 +187,7 @@ def schedUpdate(action):
         action_ref.set("on")
     elif action_data == 'on' and action == 'off':
         action_ref.set("off")
+    return
 
 def addScheduleAux(start_date, end_date):
     try:
@@ -217,8 +218,8 @@ def addScheduleAux(start_date, end_date):
     scheduler_data.insert(insert_index, {start_date:end_date})
     scheduler_ref.set(scheduler_data)
     # add a background schedule to start and stop according to the new date
-    bg_sched.add_job(schedUpdate, run_date=start_date_p, args=["on"])
-    bg_sched.add_job(schedUpdate, run_date=end_date_p, args=["off"])
+    bg_sched.add_job(schedUpdate, run_date=start_date_p, args=["on"], trigger='date')
+    bg_sched.add_job(schedUpdate, run_date=end_date_p, args=["off"], trigger='date')
 
 
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
@@ -285,7 +286,7 @@ def getStatus():
     real_data = real_data_ref.get()
     print("[DEBUG] real_data: ", real_data)
     data_sensors = []
-    curr_time = datetime.datetime.now()
+    curr_time = getCurrentTime()
     active_delta = datetime.timedelta(minutes=3)    # time that passed until asensor is inactive
     for sensor in active_sensors.keys():
         if sensor not in real_data:

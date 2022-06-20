@@ -39,21 +39,21 @@
 #define ECHO_PIN5 27
 
 // S1-5
-#define SITTING_DISTANCE1 70
-#define SITTING_DISTANCE2 70
-#define SITTING_DISTANCE3 60
-#define SITTING_DISTANCE4 70
-#define SITTING_DISTANCE5 70
+// #define SITTING_DISTANCE1 75
+// #define SITTING_DISTANCE2 75
+// #define SITTING_DISTANCE3 61
+// #define SITTING_DISTANCE4 85
+// #define SITTING_DISTANCE5 72
 // S6-10
-// #define SITTING_DISTANCE1 47
-// #define SITTING_DISTANCE2 50
-// #define SITTING_DISTANCE3 65
-// #define SITTING_DISTANCE4 50
-// #define SITTING_DISTANCE5 50
+#define SITTING_DISTANCE1 47
+#define SITTING_DISTANCE2 50
+#define SITTING_DISTANCE3 65
+#define SITTING_DISTANCE4 50
+#define SITTING_DISTANCE5 50
 
 #define PULL_SENSORS_DATA_TIME 10000
 #define FIREBASE_TIME_INTERVAL 2000 // time interval to send data for the firebase in ms
-#define WIFI_CHECK_INTERVAL 1000*60*5  // 5 minutes interval  
+#define WIFI_CHECK_INTERVAL 1000*60*10  // 5 minutes interval  
 
 
 using namespace std;
@@ -175,7 +175,7 @@ void setup() {
   // connect to firebase
   connect2Firebase();
 
-  vector<string> sensors_ids = getSensorsNames("S1-5");
+  vector<string> sensors_ids = getSensorsNames("S6-10");
 
   // {sensorID:{TRIG_PIN,ECHO_PIN,counter,total distance, sitting_distance}
   vector<int> vec_s01 = {TRIG_PIN1, ECHO_PIN1, 0, 0, SITTING_DISTANCE1};
@@ -252,7 +252,7 @@ vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int t
 
 string isSitting(int counter, int tot_distance) {
   string sitting = "";
-  if (counter > 0) {
+  if (counter >= 0) {
     sitting = "YES";
   }
   else {
@@ -308,10 +308,10 @@ void updateDB(string sensorID, vector<int> sensor_data) {
 }
 
 void checkWifiConnection() {
-  if ((Wifi.status() != WL_CONNECTED )) {
-    Wifi.disconnect();
+  if ((WiFi.status() != WL_CONNECTED )) {
+    WiFi.disconnect();
     Serial.println("Reconnecting Wifi...");
-    Wifi.reconnect();
+    WiFi.reconnect();
     vTaskDelay(5000);
   }
 }

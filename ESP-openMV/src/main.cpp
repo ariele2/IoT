@@ -127,10 +127,10 @@ void removeCharsFromString(string &str, char* charsToRemove) {
 }
 
 void checkWifiConnection() {
-  if ((Wifi.status() != WL_CONNECTED )) {
-    Wifi.disconnect();
+  if ((WiFi.status() != WL_CONNECTED )) {
+    WiFi.disconnect();
     Serial.println("Reconnecting Wifi...");
-    Wifi.reconnect();
+    WiFi.reconnect();
     vTaskDelay(5000);
   }
 }
@@ -229,7 +229,7 @@ void loop() {
     char buf[50] = "";
     rec_data.toCharArray(buf, 50);
     res = buf;
-    res = fixReceivedData();
+    res = fixReceivedData(res);
     Serial.print("res to cloud: ");
     Serial.println(res.c_str());
     if (Firebase.ready() && signupOK && (res.compare("in") == 0 || res.compare("out") == 0)) {  
