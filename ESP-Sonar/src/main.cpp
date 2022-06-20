@@ -11,7 +11,7 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 #include <map>
-
+#include <FirebaseFS.h>
 
 
 #define WIFI_SSID "TechPublic"
@@ -174,7 +174,8 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
-
+  Serial.print("setup - Free firebase heap: ")
+  Serial.println(Firebase.getFreeHeap());
   vector<string> sensors_ids = getSensorsNames("S6-10");
 
   // {sensorID:{TRIG_PIN,ECHO_PIN,counter,total distance, sitting_distance}
@@ -305,40 +306,42 @@ void updateDB(string sensorID, vector<int> sensor_data) {
     Serial.println("FAILED");
     Serial.println("REASON: " + fbdo.errorReason());
   }
+  Serial.print("updateDB - Free firebase heap: ")
+  Serial.println(Firebase.getFreeHeap());
 }
 
-void refreshWifiConnection() {
-  WiFi.disconnect();
-  Serial.println("Reconnecting Wifi...");
-  WiFi.reconnect();
+void checkWifiConnection() {
+  unsigned long prevMillis = 0;
+  if ((WiFi.status() != WL_CONNECTED ) && (millis() - prevMillis > 5000 || prevMillis == 0)) {
+    WiFi.disconnect();
+    Serial.println("Reconnecting Wifi...");
+    WiFi.reconnect();
+    prevMillis = millis();
+  }
 }
 
 void checkAction() {
   unsigned long prevMillis = 0, wifiPrevMillis = 0;
-  int counter = 0;
+  checkWifiConnection();
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
     while (action.compare("off")==0) {
-      if (millis() - prevMillis > 1000*60 || prevMillis == 0) {
+      if (millis() - prevMillis > 5000 || prevMillis == 0) {
+        Serial.print("checkAction - Free firebase heap: ")
+        Serial.println(Firebase.getFreeHeap());
         if (Firebase.RTDB.getString(&fbdo, "action/")) {
           action = fbdo.to<string>();
         }
         else {
-          Serial.println("Cannot gather information");
+          Serial.println("Cannot access Firebase");
         }
         prevMillis = millis();
         Serial.print("action = ");
         Serial.print(action.c_str());
         Serial.println(" - system is off!");
-        if (Firebase.RTDB.setInt(&fbdo, "/updateme6-10", counter)) {  // validates that the esp is working
-          counter += 1;
-        }
-        else {
-          counter = 0;
-        }
       }
-      if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0)) {
-        refreshWifiConnection();
+      if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
+        checkWifiConnection();
         wifiPrevMillis = millis();
       }
     }
@@ -349,8 +352,8 @@ unsigned long sendDataPrevMillis = 0;
 void loop() {
   // check if system is on and connected to wifi
   checkAction();
-  Serial.println("[DEBUG] check action finished ");
-  Serial.println();
+  Serial.print("main loop - Free firebase heap: ")
+  Serial.println(Firebase.getFreeHeap());
   // loop through the sensors and get distance data
   unsigned long pull_data_time = millis();
   while(pull_data_time + PULL_SENSORS_DATA_TIME > millis()) { // get data from sensors for xx seconds

@@ -11,6 +11,7 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 #include <map>
+#include <FirebaseFS.h>
 
 
 // Insert your network credentials
@@ -79,6 +80,8 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
+  Serial.print("setup - Free firebase heap: ")
+  Serial.println(Firebase.getFreeHeap());
 }
 
 
@@ -126,44 +129,43 @@ void removeCharsFromString(string &str, char* charsToRemove) {
    }
 }
 
-void refreshWifiConnection() {
-  WiFi.disconnect();
-  Serial.println("Reconnecting Wifi...");
-  WiFi.reconnect();
+void checkWifiConnection() {
+  unsigned long prevMillis = 0;
+  if ((WiFi.status() != WL_CONNECTED ) && (millis() - prevMillis > 5000 || prevMillis == 0)) {
+    WiFi.disconnect();
+    Serial.println("Reconnecting Wifi...");
+    WiFi.reconnect();
+    prevMillis = millis();
+  }
 }
 
 void checkAction() {
   unsigned long prevMillis = 0, wifiPrevMillis = 0;
-  int counter = 0;
+  checkWifiConnection();
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
     while (action.compare("off")==0) {
-      if (millis() - prevMillis > 1000*60 || prevMillis == 0) {
+      if (millis() - prevMillis > 5000 || prevMillis == 0) {
+        Serial.print("checkAction - Free firebase heap: ")
+        Serial.println(Firebase.getFreeHeap());
         if (Firebase.RTDB.getString(&fbdo, "action/")) {
           action = fbdo.to<string>();
         }
         else {
-          Serial.println("Cannot gather information");
+          Serial.println("Cannot access Firebase");
         }
         prevMillis = millis();
         Serial.print("action = ");
         Serial.print(action.c_str());
         Serial.println(" - system is off!");
-        if (Firebase.RTDB.setInt(&fbdo, "/updatememv", counter)) {  // validates that the esp is working
-          counter += 1;
-        }
-        else {
-          counter = 0;
-        }
       }
-      if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0)) {
-        refreshWifiConnection();
+      if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
+        checkWifiConnection();
         wifiPrevMillis = millis();
       }
     }
   }
 }
-
 
 void updateDB(string value) {
   string curr_time = genCurrTimeStr();
@@ -205,6 +207,8 @@ void updateDB(string value) {
     Serial.println("FAILED");
     Serial.println("REASON: " + fbdo.errorReason());
   }
+  Serial.print("updateDB - Free firebase heap: ")
+  Serial.println(Firebase.getFreeHeap());
 }
 
 
@@ -231,6 +235,8 @@ unsigned long recvDataPrevMillis = 0;
 
 void loop() {
   checkAction();
+  Serial.print("main loop - Free firebase heap: ")
+  Serial.println(Firebase.getFreeHeap());
   if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
     string res = string("");
     recvDataPrevMillis = millis(); 
