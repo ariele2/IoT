@@ -365,8 +365,13 @@ void checkReset() {
 // }
 
 unsigned long sendDataPrevMillis = 0;
+int off_reset_ctr = 0;
 void loop() {
   checkReset();
+  if (off_reset_ctr > 12*15) { // 12 times a minute * (minutes)
+    Serial.println("Restarting idle system.....");
+    ESP.restart();
+  }
   string action = "on";
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     action = fbdo.to<string>();
@@ -405,6 +410,7 @@ void loop() {
       Serial.print("action = ");
       Serial.print(action.c_str());
       Serial.println(" - system is off!");
+      off_reset_ctr++;
       vTaskDelay(5000);
     }
   }
