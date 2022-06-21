@@ -337,6 +337,7 @@ void checkAction() {
     string action = fbdo.to<string>();
     while (action.compare("off")==0) {
       if (millis() - prevMillis > 5000 || prevMillis == 0) {
+        checkReset();
         if (Firebase.RTDB.getString(&fbdo, "action/")) {
           action = fbdo.to<string>();
         }
@@ -349,7 +350,6 @@ void checkAction() {
         Serial.println(" - system is off!");
       }
       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
-        checkReset();
         checkWifiConnection();
         wifiPrevMillis = millis();
         Serial.print("Restart in ");
