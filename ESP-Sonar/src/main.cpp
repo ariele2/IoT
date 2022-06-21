@@ -52,7 +52,7 @@
 
 #define PULL_SENSORS_DATA_TIME 10000
 #define FIREBASE_TIME_INTERVAL 2000 // time interval to send data for the firebase in ms
-#define WIFI_CHECK_INTERVAL 1000*60*10  // 5 minutes interval  
+#define WIFI_CHECK_INTERVAL 1000*60*5  // 5 minutes interval  
 
 
 using namespace std;
