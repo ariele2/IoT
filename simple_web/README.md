@@ -1,4 +1,5 @@
 To run the server run the following commands to install necessary libraries:
+
 pip install flask
 
 pip install flask_wtf
