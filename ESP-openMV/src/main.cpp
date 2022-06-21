@@ -150,41 +150,41 @@ void checkReset() {
   }
 }
 
-void checkAction() {
-  unsigned long prevMillis = 0, wifiPrevMillis = 0;
-  checkReset();
-  checkWifiConnection();
-  int counter = 0;
-  if (Firebase.RTDB.getString(&fbdo, "action/")) {
-    string action = fbdo.to<string>();
-    while (action.compare("off")==0) {
-      if (millis() - prevMillis > 5000 || prevMillis == 0) {
-        checkReset();
-        if (Firebase.RTDB.getString(&fbdo, "action/")) {
-          action = fbdo.to<string>();
-        }
-        else {
-          Serial.println("Cannot access Firebase");
-        }
-        prevMillis = millis();
-        Serial.print("action = ");
-        Serial.print(action.c_str());
-        Serial.println(" - system is off!");
-      }
-      if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
-        checkWifiConnection();
-        wifiPrevMillis = millis();
-        Serial.print("Restart in ");
-        Serial.print(15 - counter*5);
-        Serial.println(" minutes");
-        if (counter >= 3) {
-          ESP.restart();
-        }
-        counter++;
-      }
-    }
-  }
-}
+// void checkAction() {
+//   unsigned long prevMillis = 0, wifiPrevMillis = 0;
+//   checkReset();
+//   checkWifiConnection();
+//   int counter = 0;
+//   if (Firebase.RTDB.getString(&fbdo, "action/")) {
+//     string action = fbdo.to<string>();
+//     while (action.compare("off")==0) {
+//       if (millis() - prevMillis > 5000 || prevMillis == 0) {
+//         checkReset();
+//         if (Firebase.RTDB.getString(&fbdo, "action/")) {
+//           action = fbdo.to<string>();
+//         }
+//         else {
+//           Serial.println("Cannot access Firebase");
+//         }
+//         prevMillis = millis();
+//         Serial.print("action = ");
+//         Serial.print(action.c_str());
+//         Serial.println(" - system is off!");
+//       }
+//       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
+//         checkWifiConnection();
+//         wifiPrevMillis = millis();
+//         Serial.print("Restart in ");
+//         Serial.print(15 - counter*5);
+//         Serial.println(" minutes");
+//         if (counter >= 3) {
+//           ESP.restart();
+//         }
+//         counter++;
+//       }
+//     }
+//   }
+// }
 
 void updateDB(string value) {
   string curr_time = genCurrTimeStr();
@@ -251,22 +251,38 @@ string fixReceivedData(string res) {
 unsigned long recvDataPrevMillis = 0;
 
 void loop() {
-  checkAction();
-  if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
-    string res = string("");
-    recvDataPrevMillis = millis(); 
-    String rec_data = Serial2.readString();
-    Serial.print("Recieved: ");
-    Serial.println(rec_data);
-    char buf[50] = "";
-    rec_data.toCharArray(buf, 50);
-    res = buf;
-    res = fixReceivedData(res);
-    Serial.print("res to cloud: ");
-    Serial.println(res.c_str());
-    if (Firebase.ready() && signupOK && (res.compare("IN") == 0 || res.compare("OUT") == 0)) {  
-      updateDB(res);
-      res = string("");
+  // checkAction();
+  checkReset();
+  string action = "on";
+  if (Firebase.RTDB.getString(&fbdo, "action/")) {
+    action = fbdo.to<string>();
+    if (action.compare("on")==0) {
+      if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
+        string res = string("");
+        recvDataPrevMillis = millis(); 
+        String rec_data = Serial2.readString();
+        Serial.print("Recieved: ");
+        Serial.println(rec_data);
+        char buf[50] = "";
+        rec_data.toCharArray(buf, 50);
+        res = buf;
+        res = fixReceivedData(res);
+        Serial.print("res to cloud: ");
+        Serial.println(res.c_str());
+        if (Firebase.ready() && signupOK && (res.compare("IN") == 0 || res.compare("OUT") == 0)) {  
+          updateDB(res);
+          res = string("");
+        }
+      }
     }
+    else{
+      Serial.print("action = ");
+      Serial.print(action.c_str());
+      Serial.println(" - system is off!");
+      vTaskDelay(5000);
+    }
+  }
+  else {
+    checkWifiConnection();
   }
 }

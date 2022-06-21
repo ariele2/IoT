@@ -256,7 +256,7 @@ string isSitting(int counter, int tot_distance) {
   else {
     sitting = "NO";
   }
-  if (tot_count != 0 && tot_distance/tot_count < 5.5) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
+  if (tot_count != 0 && tot_distance/tot_count < 4) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
     sitting = "ERROR";
   }
   return sitting;
@@ -316,7 +316,7 @@ void checkWifiConnection() {
 }
 
 void checkReset() {
-  string reset_str = "reset1-5/"; // change to reset 6-10 for the second esp
+  string reset_str = "reset6-10/"; // change to reset 6-10 for the second esp
   if (Firebase.RTDB.getString(&fbdo, reset_str)) {
     string reset = fbdo.to<string>();
     if (reset.compare("yes") == 0) {
@@ -328,73 +328,87 @@ void checkReset() {
   }
 }
 
-void checkAction() {
-  unsigned long prevMillis = 0, wifiPrevMillis = 0;
-  checkReset();
-  checkWifiConnection();
-  int counter = 0;
-  if (Firebase.RTDB.getString(&fbdo, "action/")) {
-    string action = fbdo.to<string>();
-    while (action.compare("off")==0) {
-      if (millis() - prevMillis > 5000 || prevMillis == 0) {
-        checkReset();
-        if (Firebase.RTDB.getString(&fbdo, "action/")) {
-          action = fbdo.to<string>();
-        }
-        else {
-          Serial.println("Cannot access Firebase");
-        }
-        prevMillis = millis();
-        Serial.print("action = ");
-        Serial.print(action.c_str());
-        Serial.println(" - system is off!");
-      }
-      if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
-        checkWifiConnection();
-        wifiPrevMillis = millis();
-        Serial.print("Restart in ");
-        Serial.print(15 - counter*5);
-        Serial.println(" minutes");
-        if (counter >= 3) {
-          ESP.restart();
-        }
-        counter++;
-      }
-    }
-  }
-}
+// void checkAction() {
+//   unsigned long prevMillis = 0, wifiPrevMillis = 0;
+//   checkReset();
+//   checkWifiConnection();
+//   int counter = 0;
+//   if (Firebase.RTDB.getString(&fbdo, "action/")) {
+//     string action = fbdo.to<string>();
+//     while (action.compare("off")==0) {
+//       if (millis() - prevMillis > 5000 || prevMillis == 0) {
+//         checkReset();
+//         if (Firebase.RTDB.getString(&fbdo, "action/")) {
+//           action = fbdo.to<string>();
+//         }
+//         else {
+//           Serial.println("Cannot access Firebase");
+//         }
+//         prevMillis = millis();
+//         Serial.print("action = ");
+//         Serial.print(action.c_str());
+//         Serial.println(" - system is off!");
+//       }
+//       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
+//         checkWifiConnection();
+//         wifiPrevMillis = millis();
+//         Serial.print("Restart in ");
+//         Serial.print(15 - counter*5);
+//         Serial.println(" minutes");
+//         if (counter >= 3) {
+//           ESP.restart();
+//         }
+//         counter++;
+//       }
+//     }
+//   }
+// }
 
 unsigned long sendDataPrevMillis = 0;
 void loop() {
-  // check if system is on and connected to wifi
-  checkAction();
-  // loop through the sensors and get distance data
-  unsigned long pull_data_time = millis();
-  while(pull_data_time + PULL_SENSORS_DATA_TIME > millis()) { // get data from sensors for xx seconds
-    for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and get data for each of them
-      Serial.print("[DEBUG] sensorID: ");
-      Serial.print((it->first).c_str());
-      vector<int> res = calcSitCounter(it->second[0], it->second[1], it->second[2], it->second[3], it->second[4]); // distance
-      it->second[2] = res[0];
-      it->second[3] = res[1];
-      Serial.print("; counter: ");
-      Serial.print(it->second[2]);
-      Serial.print("; total distance: ");
-      Serial.println(it->second[3]);
+  checkReset();
+  string action = "on";
+  if (Firebase.RTDB.getString(&fbdo, "action/")) {
+    action = fbdo.to<string>();
+    if (action.compare("on")==0) {
+      unsigned long pull_data_time = millis();
+      // loop through the sensors and get distance data
+      while(pull_data_time + PULL_SENSORS_DATA_TIME > millis()) { // get data from sensors for xx seconds
+        for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and get data for each of them
+          Serial.print("[DEBUG] sensorID: ");
+          Serial.print((it->first).c_str());
+          vector<int> res = calcSitCounter(it->second[0], it->second[1], it->second[2], it->second[3], it->second[4]); // distance
+          it->second[2] = res[0];
+          it->second[3] = res[1];
+          Serial.print("; counter: ");
+          Serial.print(it->second[2]);
+          Serial.print("; total distance: ");
+          Serial.println(it->second[3]);
+        }
+        tot_count++;
+      }
+      Serial.print("[DEBUG] Finished pulling data - tot_count: ");
+      Serial.println(tot_count);
+      // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
+      if (Firebase.ready() && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)) {
+        sendDataPrevMillis = millis();
+        for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and update data 
+          updateDB(it->first, it->second);
+          // reset the distance and total distance for new calculation
+          it->second[2] = 0;
+          it->second[3] = 0;
+        }
+      }
+      tot_count = 0;
     }
-    tot_count++;
-  }
-  Serial.print("[DEBUG] Finished pulling data - tot_count: ");
-  Serial.println(tot_count);
-  // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
-  if (Firebase.ready() && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)) {
-    sendDataPrevMillis = millis();
-    for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and update data 
-      updateDB(it->first, it->second);
-      // reset the distance and total distance for new calculation
-      it->second[2] = 0;
-      it->second[3] = 0;
+    else{
+      Serial.print("action = ");
+      Serial.print(action.c_str());
+      Serial.println(" - system is off!");
+      vTaskDelay(5000);
     }
   }
-  tot_count = 0;
+  else {
+    checkWifiConnection();
+  }
 }
