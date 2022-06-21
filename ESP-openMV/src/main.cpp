@@ -11,7 +11,6 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 #include <map>
-#include <FirebaseFS.h>
 
 
 // Insert your network credentials
@@ -28,7 +27,8 @@
 #define RXD2 16
 #define TXD2 17
 
-#define WIFI_CHECK_INTERVAL 1000*60*5  // 5 minutes interval   
+#define WIFI_CHECK_INTERVAL 1000*60*5  // 5 minutes interval  
+#define RESTART_INTERVAL 1000*60*15 
 
 using namespace std;
 
@@ -80,7 +80,7 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
-  Serial.print("setup - Free firebase heap: ")
+  Serial.print("setup - Free firebase heap: ");
   Serial.println(Firebase.getFreeHeap());
 }
 
@@ -142,12 +142,15 @@ void checkWifiConnection() {
 void checkAction() {
   unsigned long prevMillis = 0, wifiPrevMillis = 0;
   checkWifiConnection();
+  int counter = 0;
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
     while (action.compare("off")==0) {
       if (millis() - prevMillis > 5000 || prevMillis == 0) {
-        Serial.print("checkAction - Free firebase heap: ")
+        Serial.print("checkAction - Free firebase heap: ");
         Serial.println(Firebase.getFreeHeap());
+        Serial.print("checkAction - Free ESP heap: ");
+        Serial.println(ESP.getFreeHeap());
         if (Firebase.RTDB.getString(&fbdo, "action/")) {
           action = fbdo.to<string>();
         }
@@ -162,6 +165,13 @@ void checkAction() {
       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
         checkWifiConnection();
         wifiPrevMillis = millis();
+        counter++;
+        Serial.print("Restart in ");
+        Serial.print(15 - counter*5);
+        Serial.println(" minutes");
+        if (counter >= 3) {
+          ESP.restart();
+        }
       }
     }
   }
@@ -207,7 +217,7 @@ void updateDB(string value) {
     Serial.println("FAILED");
     Serial.println("REASON: " + fbdo.errorReason());
   }
-  Serial.print("updateDB - Free firebase heap: ")
+  Serial.print("updateDB - Free firebase heap: ");
   Serial.println(Firebase.getFreeHeap());
 }
 
@@ -235,7 +245,7 @@ unsigned long recvDataPrevMillis = 0;
 
 void loop() {
   checkAction();
-  Serial.print("main loop - Free firebase heap: ")
+  Serial.print("main loop - Free firebase heap: ");
   Serial.println(Firebase.getFreeHeap());
   if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
     string res = string("");

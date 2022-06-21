@@ -11,7 +11,6 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 #include <map>
-#include <FirebaseFS.h>
 
 
 #define WIFI_SSID "TechPublic"
@@ -323,12 +322,15 @@ void checkWifiConnection() {
 void checkAction() {
   unsigned long prevMillis = 0, wifiPrevMillis = 0;
   checkWifiConnection();
+  int counter = 0;
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
     string action = fbdo.to<string>();
     while (action.compare("off")==0) {
       if (millis() - prevMillis > 5000 || prevMillis == 0) {
-        Serial.print("checkAction - Free firebase heap: ")
+        Serial.print("checkAction - Free firebase heap: ");
         Serial.println(Firebase.getFreeHeap());
+        Serial.print("checkAction - Free ESP heap: ");
+        Serial.println(ESP.getFreeHeap());
         if (Firebase.RTDB.getString(&fbdo, "action/")) {
           action = fbdo.to<string>();
         }
@@ -343,6 +345,13 @@ void checkAction() {
       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
         checkWifiConnection();
         wifiPrevMillis = millis();
+        counter++;
+        Serial.print("Restart in ");
+        Serial.print(15 - counter*5);
+        Serial.println(" minutes");
+        if (counter >= 3) {
+          ESP.restart();
+        }
       }
     }
   }
