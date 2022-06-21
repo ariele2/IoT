@@ -80,8 +80,6 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
-  Serial.print("setup - Free firebase heap: ");
-  Serial.println(Firebase.getFreeHeap());
 }
 
 
@@ -147,10 +145,6 @@ void checkAction() {
     string action = fbdo.to<string>();
     while (action.compare("off")==0) {
       if (millis() - prevMillis > 5000 || prevMillis == 0) {
-        Serial.print("checkAction - Free firebase heap: ");
-        Serial.println(Firebase.getFreeHeap());
-        Serial.print("checkAction - Free ESP heap: ");
-        Serial.println(ESP.getFreeHeap());
         if (Firebase.RTDB.getString(&fbdo, "action/")) {
           action = fbdo.to<string>();
         }
@@ -165,13 +159,13 @@ void checkAction() {
       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
         checkWifiConnection();
         wifiPrevMillis = millis();
-        counter++;
         Serial.print("Restart in ");
         Serial.print(15 - counter*5);
         Serial.println(" minutes");
         if (counter >= 3) {
           ESP.restart();
         }
+        counter++;
       }
     }
   }
@@ -217,8 +211,6 @@ void updateDB(string value) {
     Serial.println("FAILED");
     Serial.println("REASON: " + fbdo.errorReason());
   }
-  Serial.print("updateDB - Free firebase heap: ");
-  Serial.println(Firebase.getFreeHeap());
 }
 
 
@@ -245,8 +237,6 @@ unsigned long recvDataPrevMillis = 0;
 
 void loop() {
   checkAction();
-  Serial.print("main loop - Free firebase heap: ");
-  Serial.println(Firebase.getFreeHeap());
   if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
     string res = string("");
     recvDataPrevMillis = millis(); 
