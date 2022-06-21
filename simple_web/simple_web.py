@@ -405,6 +405,12 @@ def addSchedule():
         return redirect(url_for("scheduler", res=res))
     return redirect(url_for("scheduler", res=''))
 
+@app.route("/restartSystem")
+def restartSystem():
+    refs = [db.reference("/reset1-5"), db.reference("/reset6-10"), db.reference("resetmv")]
+    for ref in refs:
+        ref.set("yes")
+    return redirect(url_for("getStatus"))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

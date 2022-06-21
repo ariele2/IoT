@@ -315,8 +315,22 @@ void checkWifiConnection() {
   }
 }
 
+void checkReset() {
+  string reset_str = "reset1-5/"; // change to reset 6-10 for the second esp
+  if (Firebase.RTDB.getString(&fbdo, reset_str)) {
+    string reset = fbdo.to<string>();
+    if (reset.compare("yes") == 0) {
+      Serial.println("Reseting system.....");
+      Firebase.RTDB.setString(&fbdo, reset_str, "no"); 
+      vTaskDelay(5000);
+      ESP.restart();
+    }
+  }
+}
+
 void checkAction() {
   unsigned long prevMillis = 0, wifiPrevMillis = 0;
+  checkReset();
   checkWifiConnection();
   int counter = 0;
   if (Firebase.RTDB.getString(&fbdo, "action/")) {
@@ -335,6 +349,7 @@ void checkAction() {
         Serial.println(" - system is off!");
       }
       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
+        checkReset();
         checkWifiConnection();
         wifiPrevMillis = millis();
         Serial.print("Restart in ");
