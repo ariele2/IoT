@@ -33,8 +33,13 @@
           {% endfor %}
         </tbody>
       </table>
-      <a href="/restartSystem" class="btn btn-danger downloadBtn mt-3 mb-2"> Restart System </a>
+      <div class="mt-4 mb-5">
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#restartModal">
+          Restart System
+        </button>
+      </div>
 </div>
 
+{% include 'restartModal.html' %}
 
 {% endblock %}
