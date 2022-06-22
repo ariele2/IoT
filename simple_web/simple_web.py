@@ -220,8 +220,10 @@ def addScheduleAux(start_date, end_date):
     scheduler_data.insert(insert_index, {start_date:end_date})
     scheduler_ref.set(scheduler_data)
     # add a background schedule to start and stop according to the new date
-    bg_sched.add_job(schedUpdate, run_date=start_date_p, args=["on"], trigger='date')
-    bg_sched.add_job(schedUpdate, run_date=end_date_p, args=["off"], trigger='date')
+    if not bg_sched.get_job(id=start_date):
+        bg_sched.add_job(schedUpdate, run_date=start_date_p, args=["on"], trigger='date', id=start_date)
+    if not bg_sched.get_job(id=end_date):
+        bg_sched.add_job(schedUpdate, run_date=end_date_p, args=["off"], trigger='date', id=end_date)
 
 
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
@@ -390,8 +392,13 @@ def scheduler():
 def deleteSchedule():
     schedule_id = request.args.get('id')
     scheduler_data = scheduler_ref.get()
-    scheduler_data.pop(int(schedule_id))
+    start_end = scheduler_data.pop(int(schedule_id))
     scheduler_ref.set(scheduler_data)
+    s, e = list(start_end.items())[0]
+    if bg_sched.get_job(id=s):
+        bg_sched.remove_job(id=s)
+    if bg_sched.get_job(id=e):
+        bg_sched.remove_job(id=e)
     return redirect('scheduler')
 
 
