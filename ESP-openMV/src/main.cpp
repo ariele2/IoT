@@ -128,18 +128,28 @@ void removeCharsFromString(string &str, char* charsToRemove) {
 }
 
 void checkWifiConnection() {
+  Serial.println("checking wifi conection...");
   unsigned long prevMillis = 0;
-  if ((WiFi.status() != WL_CONNECTED ) && (millis() - prevMillis > 5000 || prevMillis == 0)) {
+  int fail_connect_ctr = 0;
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("wifi is not connected");
     WiFi.disconnect();
-    Serial.println("Reconnecting Wifi...");
-    WiFi.reconnect();
-    prevMillis = millis();
+    while((WiFi.status() != WL_CONNECTED ) && (millis() - prevMillis > 5000 || prevMillis == 0)) {
+      if (fail_connect_ctr > 60) {
+        Serial.println("Restarting device");
+        ESP.restart();
+      }
+      Serial.println("reconnecting wifi...");
+      WiFi.reconnect();
+      prevMillis = millis();
+      fail_connect_ctr++;
+    }
   }
 }
 
 void checkReset() {
   string reset_str = "resetmv/"; 
-  if (Firebase.RTDB.getString(&fbdo, reset_str)) { 
+  if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, reset_str)) { 
     string reset = fbdo.to<string>();
     if (reset.compare("yes") == 0) {
       Serial.println("Reseting system.....");
@@ -148,43 +158,45 @@ void checkReset() {
       ESP.restart();
     }
   }
+  else {
+    Serial.println("checkReset - FAILED");
+    Serial.println("REASON: " + fbdo.errorReason());
+  }
 }
 
-// void checkAction() {
-//   unsigned long prevMillis = 0, wifiPrevMillis = 0;
-//   checkReset();
-//   checkWifiConnection();
-//   int counter = 0;
-//   if (Firebase.RTDB.getString(&fbdo, "action/")) {
-//     string action = fbdo.to<string>();
-//     while (action.compare("off")==0) {
-//       if (millis() - prevMillis > 5000 || prevMillis == 0) {
-//         checkReset();
-//         if (Firebase.RTDB.getString(&fbdo, "action/")) {
-//           action = fbdo.to<string>();
-//         }
-//         else {
-//           Serial.println("Cannot access Firebase");
-//         }
-//         prevMillis = millis();
-//         Serial.print("action = ");
-//         Serial.print(action.c_str());
-//         Serial.println(" - system is off!");
-//       }
-//       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
-//         checkWifiConnection();
-//         wifiPrevMillis = millis();
-//         Serial.print("Restart in ");
-//         Serial.print(15 - counter*5);
-//         Serial.println(" minutes");
-//         if (counter >= 3) {
-//           ESP.restart();
-//         }
-//         counter++;
-//       }
-//     }
-//   }
-// }
+void checkAction() {
+  unsigned long prevMillis = 0, wifiPrevMillis = 0;
+  checkReset();
+  checkWifiConnection();
+  int counter = 0;
+  if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, "action/")) {
+    string action = fbdo.to<string>();
+    while (action.compare("off")==0) {
+      if (millis() - prevMillis > 5000 || prevMillis == 0) {
+        checkReset();
+        if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, "action/")) {
+          action = fbdo.to<string>();
+        }
+        else {
+          Serial.println("checkAction inside loop - FAILED");
+          Serial.println("REASON: " + fbdo.errorReason());
+        }
+        prevMillis = millis();
+        Serial.print("action = ");
+        Serial.print(action.c_str());
+        Serial.println(" - system is off!");
+      }
+      if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
+        checkWifiConnection();
+        wifiPrevMillis = millis();
+      }
+    }
+  }
+  else {
+    Serial.println("checkAction outside loop - FAILED");
+    Serial.println("REASON: " + fbdo.errorReason());
+  }
+}
 
 void updateDB(string value) {
   string curr_time = genCurrTimeStr();
@@ -200,7 +212,7 @@ void updateDB(string value) {
   }
   else {
     call_id_problem = true;
-    Serial.println("FAILED");
+    Serial.println("updateDB - FAILED");
     Serial.println("REASON: " + fbdo.errorReason());
   }
   string call_id_str = int2str(call_id);
@@ -223,11 +235,10 @@ void updateDB(string value) {
     Serial.println("PATH: " + fbdo.dataPath());
   }
   else {
-    Serial.println("FAILED");
+    Serial.println("updateDB - FAILED");
     Serial.println("REASON: " + fbdo.errorReason());
   }
 }
-
 
 string fixReceivedData(string res) {
   if (res.find("out") != string::npos) {
@@ -247,47 +258,29 @@ string fixReceivedData(string res) {
   return res;
 }
 
-
 unsigned long recvDataPrevMillis = 0;
 int off_reset_ctr = 0;
 void loop() {
-  // checkAction();
-  checkReset();
-  if (off_reset_ctr > 12*15) { // 12 times a minute * (minutes)
-    Serial.println("Restarting idle system.....");
-    ESP.restart();
-  }
-  string action = "on";
-  if (Firebase.RTDB.getString(&fbdo, "action/")) {
-    action = fbdo.to<string>();
-    if (action.compare("on")==0) {
-      if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
-        string res = string("");
-        recvDataPrevMillis = millis(); 
-        String rec_data = Serial2.readString();
-        Serial.print("Recieved: ");
-        Serial.println(rec_data);
-        char buf[50] = "";
-        rec_data.toCharArray(buf, 50);
-        res = buf;
-        res = fixReceivedData(res);
-        Serial.print("res to cloud: ");
-        Serial.println(res.c_str());
-        if (Firebase.ready() && signupOK && (res.compare("IN") == 0 || res.compare("OUT") == 0)) {  
-          updateDB(res);
-          res = string("");
-        }
-      }
+  checkAction();
+  if (millis() - recvDataPrevMillis > 500 || recvDataPrevMillis == 0) {
+    string res = string("");
+    recvDataPrevMillis = millis(); 
+    String rec_data = Serial2.readString();
+    Serial.print("Recieved: ");
+    Serial.println(rec_data);
+    char buf[50] = "";
+    rec_data.toCharArray(buf, 50);
+    res = buf;
+    res = fixReceivedData(res);
+    Serial.print("res to cloud: ");
+    Serial.println(res.c_str());
+    if (Firebase.ready() && signupOK && (res.compare("IN") == 0 || res.compare("OUT") == 0)) {  
+      updateDB(res);
+      res = string("");
     }
-    else{
-      Serial.print("action = ");
-      Serial.print(action.c_str());
-      Serial.println(" - system is off!");
-      off_reset_ctr++;
-      vTaskDelay(5000);
+    else {
+      Serial.println("main loop - FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
     }
-  }
-  else {
-    checkWifiConnection();
   }
 }
