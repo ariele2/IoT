@@ -46,12 +46,12 @@ void connect2Wifi() {
   }
   int not_connected_ctr = 0;
   while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
-  if (not_connected_ctr > 120) {
-    ESP.restart();
-  }
-  if (serial_debug) {
-    Serial.print(".");
-  }
+    if (not_connected_ctr > 120) {
+      ESP.restart();
+    }
+    if (serial_debug) {
+      Serial.print(".");
+    }
     delay(1000);
     not_connected_ctr++;
   }

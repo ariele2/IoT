@@ -69,14 +69,18 @@ const bool serial_debug = false;
 void connect2Wifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   if (serial_debug) {
-    Serial.print("Connecting to Wi-Fi ");
-    Serial.print(WIFI_SSID);
+    Serial.print("Connecting to Wi-Fi");
   }
+  int not_connected_ctr = 0;
   while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
+    if (not_connected_ctr > 120) {
+      ESP.restart();
+    }
     if (serial_debug) {
       Serial.print(".");
     }
-    delay(300);
+    delay(1000);
+    not_connected_ctr++;
   }
   if (serial_debug) {
     Serial.println();
@@ -335,7 +339,9 @@ void updateDB(string sensorID, vector<int> sensor_data) {
 }
 
 void checkWifiConnection() {
-  Serial.println("checking wifi conection...");
+  if (serial_debug) {
+    Serial.println("checking wifi conection...");
+  }
   unsigned long prevMillis = 0;
   int fail_connect_ctr = 0;
   if (WiFi.status() != WL_CONNECTED) {
@@ -355,6 +361,7 @@ void checkWifiConnection() {
       }
       WiFi.reconnect();
       prevMillis = millis();
+      fail_connect_ctr++;
     }
   }
 }
