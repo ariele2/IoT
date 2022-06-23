@@ -98,9 +98,11 @@ def backupDayData(day = None):
     columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
     df = pd.DataFrame(columns=columns_titles)
     if not day:
-        start_day = getCurrentTime()
+        day = getCurrentTime()
+        start_day = day - datetime.timedelta(days=1)
         print(f"start_day: {start_day}")
-    day = start_day + datetime.timedelta(days=1)
+    else:
+        start_day = day - datetime.timedelta(days=1)
     start_day = start_day.replace(hour=0, minute=0, second=0)
     day = day.replace(hour=0, minute=0, second=0)
     print(f"backup in progress, start: {start_day} - end: {day}")
@@ -222,6 +224,7 @@ def addScheduleAux(start_date, end_date):
 
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
 def home():
+    backupDayData(datetime.datetime(2022, 6, 23))
     form = InfoForm()
     scheduler_data = scheduler_ref.get()
     action_data = action_ref.get()
