@@ -37,17 +37,30 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
+const bool serial_debug = false;
+
 void connect2Wifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to Wi-Fi");
-  while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
-    Serial.print(".");
-    delay(300);
+  if (serial_debug) {
+    Serial.print("Connecting to Wi-Fi");
   }
-  Serial.println();
-  Serial.print("Connected with IP: ");
-  Serial.println(WiFi.localIP());
-  Serial.println();
+  int not_connected_ctr = 0;
+  while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
+  if (not_connected_ctr > 120) {
+    ESP.restart();
+  }
+  if (serial_debug) {
+    Serial.print(".");
+  }
+    delay(1000);
+    not_connected_ctr++;
+  }
+  if (serial_debug) {
+    Serial.println();
+    Serial.print("Connected with IP: ");
+    Serial.println(WiFi.localIP());
+    Serial.println();
+  }
 }
 
 bool signupOK = false;
@@ -57,11 +70,15 @@ void connect2Firebase() {
   config.database_url = DATABASE_URL;
   /* Sign up */
   if (Firebase.signUp(&config, &auth, "", "")){ //sign up to the database (can add credentials if needed)
-    Serial.println("ok");
+    if (serial_debug) {
+      Serial.println("ok");
+    }
     signupOK = true;
   }
   else{ 
-    Serial.printf("%s\n", config.signer.signupError.message.c_str());
+    if (serial_debug) {
+      Serial.printf("%s\n", config.signer.signupError.message.c_str());
+    }
   }
   /* Assign the callback function for the long running token generation task */
   config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
@@ -94,8 +111,10 @@ string genCurrTimeStr() {
     payload = http.getString();
   }
   else {
-    Serial.print("Error code: ");
-    Serial.println(httpResponseCode);
+    if (serial_debug) {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
   }
   http.end();
   string date = payload.c_str();
@@ -128,18 +147,26 @@ void removeCharsFromString(string &str, char* charsToRemove) {
 }
 
 void checkWifiConnection() {
-  Serial.println("checking wifi conection...");
+  if (serial_debug) {
+    Serial.println("checking wifi conection...");
+  }
   unsigned long prevMillis = 0;
   int fail_connect_ctr = 0;
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("wifi is not connected");
+    if (serial_debug) {
+      Serial.println("wifi is not connected");
+    }
     WiFi.disconnect();
     while((WiFi.status() != WL_CONNECTED ) && (millis() - prevMillis > 5000 || prevMillis == 0)) {
       if (fail_connect_ctr > 60) {
-        Serial.println("Restarting device");
+        if (serial_debug) {
+          Serial.println("Restarting device");
+        }
         ESP.restart();
       }
-      Serial.println("reconnecting wifi...");
+      if (serial_debug) {
+        Serial.println("reconnecting wifi...");
+      }
       WiFi.reconnect();
       prevMillis = millis();
       fail_connect_ctr++;
@@ -152,15 +179,19 @@ void checkReset() {
   if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, reset_str)) { 
     string reset = fbdo.to<string>();
     if (reset.compare("yes") == 0) {
-      Serial.println("Reseting system.....");
+      if (serial_debug) {
+        Serial.println("Reseting system.....");
+      }
       Firebase.RTDB.setString(&fbdo, reset_str, "no"); 
       vTaskDelay(5000);
       ESP.restart();
     }
   }
   else {
-    Serial.println("checkReset - FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("checkReset - FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
 }
 
@@ -178,13 +209,17 @@ void checkAction() {
           action = fbdo.to<string>();
         }
         else {
-          Serial.println("checkAction inside loop - FAILED");
-          Serial.println("REASON: " + fbdo.errorReason());
+          if (serial_debug) {
+            Serial.println("checkAction inside loop - FAILED");
+            Serial.println("REASON: " + fbdo.errorReason());
+          }
         }
         prevMillis = millis();
-        Serial.print("action = ");
-        Serial.print(action.c_str());
-        Serial.println(" - system is off!");
+        if (serial_debug) {
+          Serial.print("action = ");
+          Serial.print(action.c_str());
+          Serial.println(" - system is off!");
+        }
       }
       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
         checkWifiConnection();
@@ -193,15 +228,19 @@ void checkAction() {
     }
   }
   else {
-    Serial.println("checkAction outside loop - FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("checkAction outside loop - FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
 }
 
 void updateDB(string value) {
   string curr_time = genCurrTimeStr();
-  Serial.print("[DEBUG] curr_time: ");
-  Serial.println(curr_time.c_str());
+  if (serial_debug) {
+    Serial.print("[DEBUG] curr_time: ");
+    Serial.println(curr_time.c_str());
+  }
   int call_id = 0;
   bool call_id_problem = false;
   if (Firebase.ready() && Firebase.RTDB.getInt(&fbdo, "call_id/"+sensorID)) {
@@ -212,8 +251,10 @@ void updateDB(string value) {
   }
   else {
     call_id_problem = true;
-    Serial.println("updateDB - FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("updateDB - FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
   string call_id_str = int2str(call_id);
   call_id += 1;
@@ -230,13 +271,17 @@ void updateDB(string value) {
   bool update_data_res = Firebase.RTDB.updateNode(&fbdo, "data/"+curr_time+" "+sensorID, &data_set) && 
                          Firebase.RTDB.setInt(&fbdo, "call_id/"+sensorID, call_id);
   if (update_data_res && update_real_data_res) {  // updates the firebase
-    Serial.print("value: ");
-    Serial.println(value.c_str());
-    Serial.println("PATH: " + fbdo.dataPath());
+  if (serial_debug) {
+      Serial.print("value: ");
+      Serial.println(value.c_str());
+      Serial.println("PATH: " + fbdo.dataPath());
+  }
   }
   else {
-    Serial.println("updateDB - FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("updateDB - FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
 }
 
@@ -266,21 +311,29 @@ void loop() {
     string res = string("");
     recvDataPrevMillis = millis(); 
     String rec_data = Serial2.readString();
-    Serial.print("Recieved: ");
-    Serial.println(rec_data);
+    if (serial_debug) {
+      Serial.print("Recieved: ");
+      Serial.println(rec_data);
+    }
     char buf[50] = "";
     rec_data.toCharArray(buf, 50);
     res = buf;
     res = fixReceivedData(res);
-    Serial.print("res to cloud: ");
-    Serial.println(res.c_str());
-    if (Firebase.ready() && signupOK && (res.compare("IN") == 0 || res.compare("OUT") == 0)) {  
-      updateDB(res);
-      res = string("");
+    if (serial_debug) {
+      Serial.print("res to cloud: ");
+      Serial.println(res.c_str());
+    }
+    if (Firebase.ready() && signupOK) {
+      if (res.compare("IN") == 0 || res.compare("OUT") == 0) {  
+        updateDB(res);
+        res = string("");
+      }
     }
     else {
-      Serial.println("main loop - FAILED");
-      Serial.println("REASON: " + fbdo.errorReason());
+      if (serial_debug) {
+        Serial.println("main loop - FAILED");
+        Serial.println("REASON: " + fbdo.errorReason());
+      }
     }
   }
 }

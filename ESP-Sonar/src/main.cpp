@@ -64,19 +64,26 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
+const bool serial_debug = false;
 
 void connect2Wifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to Wi-Fi ");
-  Serial.print(WIFI_SSID);
+  if (serial_debug) {
+    Serial.print("Connecting to Wi-Fi ");
+    Serial.print(WIFI_SSID);
+  }
   while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
-    Serial.print(".");
+    if (serial_debug) {
+      Serial.print(".");
+    }
     delay(300);
   }
-  Serial.println();
-  Serial.print("Connected with IP: ");
-  Serial.println(WiFi.localIP());
-  Serial.println();
+  if (serial_debug) {
+    Serial.println();
+    Serial.print("Connected with IP: ");
+    Serial.println(WiFi.localIP());
+    Serial.println();
+  }
 }
 
 bool signupOK = false;
@@ -87,11 +94,15 @@ void connect2Firebase() {
 
   /* Sign up */
   if (Firebase.signUp(&config, &auth, "", "")){ //sign up to the database (can add credentials if needed)
-    Serial.println("ok");
+    if (serial_debug) {
+      Serial.println("ok");
+    }
     signupOK = true;
   }
   else{ 
-    Serial.printf("%s\n", config.signer.signupError.message.c_str());
+    if (serial_debug) {
+      Serial.printf("%s\n", config.signer.signupError.message.c_str());
+    }
   }
 
   /* Assign the callback function for the long running token generation task */
@@ -117,8 +128,10 @@ vector<string> getSensorsNames(string which) {
   if (Firebase.RTDB.getString(&fbdo, "sensors/")) {
     int sens_count = 0;
     string sensors_string = fbdo.to<string>();
-    Serial.print("sensors_string: ");
-    Serial.println(sensors_string.c_str());
+    if (serial_debug) {
+      Serial.print("sensors_string: ");
+      Serial.println(sensors_string.c_str());
+    }
     int next_sensor_pos = 0;
     while (sensors_string.length() > 0) {
       if (which.compare("S1-5") == 0) {
@@ -135,9 +148,11 @@ vector<string> getSensorsNames(string which) {
       if (sensor[0] != 'S' && which.compare("all") != 0) {
         continue;
       }
-      Serial.print(sens_count);
-      Serial.print(" [DEBUG] sensor: ");
-      Serial.println(sensor.c_str());
+      if (serial_debug) {
+        Serial.print(sens_count);
+        Serial.print(" [DEBUG] sensor: ");
+        Serial.println(sensor.c_str());
+      }
       if (sen_to_find && sensor.length() > 0) {
         sensors_ids.push_back(sensor);
       }
@@ -145,8 +160,10 @@ vector<string> getSensorsNames(string which) {
     }
   }
   else {
-    Serial.println("FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
   return sensors_ids;
 }
@@ -196,8 +213,10 @@ string genCurrTimeStr() {
     payload = http.getString();
   }
   else {
-    Serial.print("Error code: ");
-    Serial.println(httpResponseCode);
+    if (serial_debug) {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
   }
   http.end();
   string date = payload.c_str();
@@ -235,8 +254,10 @@ vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int t
   digitalWrite(trig_pin, LOW);
   unsigned long duration = pulseIn(echo_pin, HIGH);
   distance = (duration/2) / 29.1;
-  Serial.print("distance measured: ");
-  Serial.println(distance);
+  if (serial_debug) {
+    Serial.print("distance measured: ");
+    Serial.println(distance);
+  }
   if (distance < sitting_distance) {
     sensor_counter++;
   }
@@ -264,8 +285,10 @@ string isSitting(int counter, int tot_distance) {
 
 void updateDB(string sensorID, vector<int> sensor_data) {
   string curr_time = genCurrTimeStr();
-  Serial.print("[DEBUG] curr_time: ");
-  Serial.println(curr_time.c_str());
+  if (serial_debug) {
+    Serial.print("[DEBUG] curr_time: ");
+    Serial.println(curr_time.c_str());
+  }
   string sitting = isSitting(sensor_data[2], sensor_data[3]);
   int call_id = 0;
   bool call_id_problem = false;
@@ -277,8 +300,10 @@ void updateDB(string sensorID, vector<int> sensor_data) {
   }
   else {
     call_id_problem = true;
-    Serial.println("FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
   string call_id_str = int2str(call_id);
   call_id += 1;
@@ -295,13 +320,17 @@ void updateDB(string sensorID, vector<int> sensor_data) {
   bool update_data_res = Firebase.RTDB.updateNode(&fbdo, "data/"+curr_time+" "+sensorID, &data_set) && 
                          Firebase.RTDB.setInt(&fbdo, "call_id/"+sensorID, call_id);
   if (update_data_res && update_real_data_res) {  // updates the firebase
-    Serial.print("value: ");
-    Serial.println(sitting.c_str());
-    Serial.println("PATH: " + fbdo.dataPath());
+    if (serial_debug) {
+      Serial.print("value: ");
+      Serial.println(sitting.c_str());
+      Serial.println("PATH: " + fbdo.dataPath());
+    }
   }
   else {
-    Serial.println("FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
 }
 
@@ -310,14 +339,20 @@ void checkWifiConnection() {
   unsigned long prevMillis = 0;
   int fail_connect_ctr = 0;
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("wifi is not connected");
+    if (serial_debug) {
+      Serial.println("wifi is not connected");
+    }
     WiFi.disconnect();
     while((WiFi.status() != WL_CONNECTED ) && (millis() - prevMillis > 5000 || prevMillis == 0)) {
       if (fail_connect_ctr > 60) {
-        Serial.println("Restarting device");
+        if (serial_debug) {
+          Serial.println("Restarting device");
+        }
         ESP.restart();
       }
-      Serial.println("reconnecting wifi...");
+      if (serial_debug) {
+        Serial.println("reconnecting wifi...");
+      }
       WiFi.reconnect();
       prevMillis = millis();
     }
@@ -329,15 +364,19 @@ void checkReset() {
   if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, reset_str)) {
     string reset = fbdo.to<string>();
     if (reset.compare("yes") == 0) {
-      Serial.println("Reseting system.....");
+      if (serial_debug) {
+        Serial.println("Reseting system.....");
+      }
       Firebase.RTDB.setString(&fbdo, reset_str, "no"); 
       vTaskDelay(5000);
       ESP.restart();
     }
   }
   else {
-    Serial.println("checkReset - FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("checkReset - FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
 }
 
@@ -355,13 +394,17 @@ void checkAction() {
           action = fbdo.to<string>();
         }
         else {
-          Serial.println("checkAction inside loop - FAILED");
-          Serial.println("REASON: " + fbdo.errorReason());
+          if (serial_debug) {
+            Serial.println("checkAction inside loop - FAILED");
+            Serial.println("REASON: " + fbdo.errorReason());
+          }
         }
         prevMillis = millis();
-        Serial.print("action = ");
-        Serial.print(action.c_str());
-        Serial.println(" - system is off!");
+        if (serial_debug) {
+          Serial.print("action = ");
+          Serial.print(action.c_str());
+          Serial.println(" - system is off!");
+        }
       }
       if ((millis() - wifiPrevMillis > WIFI_CHECK_INTERVAL || wifiPrevMillis == 0 )) {
         checkWifiConnection();
@@ -370,8 +413,10 @@ void checkAction() {
     }
   }
   else {
-    Serial.println("checkAction outside loop - FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("checkAction outside loop - FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
 }
 
@@ -383,20 +428,26 @@ void loop() {
   // loop through the sensors and get distance data
   while(pull_data_time + PULL_SENSORS_DATA_TIME > millis()) { // get data from sensors for xx seconds
     for (auto it = sensors_dist.begin(); it != sensors_dist.end(); it++) {  // loop sensors and get data for each of them
-      Serial.print("[DEBUG] sensorID: ");
-      Serial.print((it->first).c_str());
+      if (serial_debug) {
+        Serial.print("[DEBUG] sensorID: ");
+        Serial.print((it->first).c_str());
+      }
       vector<int> res = calcSitCounter(it->second[0], it->second[1], it->second[2], it->second[3], it->second[4]); // distance
       it->second[2] = res[0];
       it->second[3] = res[1];
-      Serial.print("; counter: ");
-      Serial.print(it->second[2]);
-      Serial.print("; total distance: ");
-      Serial.println(it->second[3]);
+      if (serial_debug) {
+        Serial.print("; counter: ");
+        Serial.print(it->second[2]);
+        Serial.print("; total distance: ");
+        Serial.println(it->second[3]);
+      }
     }
     tot_count++;
   }
-  Serial.print("[DEBUG] Finished pulling data - tot_count: ");
-  Serial.println(tot_count);
+  if (serial_debug) {
+    Serial.print("[DEBUG] Finished pulling data - tot_count: ");
+    Serial.println(tot_count);
+  }
   // millis() - sendDaeaPrevMillis decides the time interval in which we sending the data to the firebase
   if (Firebase.ready() && (millis() - sendDataPrevMillis > FIREBASE_TIME_INTERVAL || sendDataPrevMillis == 0)) {
     sendDataPrevMillis = millis();
@@ -408,8 +459,10 @@ void loop() {
     }
   }
   else {
-    Serial.println("main loop - FAILED");
-    Serial.println("REASON: " + fbdo.errorReason());
+    if (serial_debug) {
+      Serial.println("main loop - FAILED");
+      Serial.println("REASON: " + fbdo.errorReason());
+    }
   }
   tot_count = 0;
 }
