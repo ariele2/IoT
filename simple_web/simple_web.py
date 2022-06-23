@@ -59,13 +59,7 @@ def getCurrentTime():
 	res = urlopen('http://just-the-time.appspot.com/')
 	result = res.read().strip()
 	result_str = result.decode('utf-8')
-	day = result_str[8:10]
-	month = result_str[5:7]
-	year = result_str[2:4]
-	hour = datetime.datetime.strptime(result_str[11:], "%H:%M:%S")
-	hour += datetime.timedelta(hours=3)
-	hour = hour.strftime("%H:%M:%S")
-	to_ret = datetime.datetime.strptime(day + "-" + month + "-" + year + " " + hour, "%d-%m-%y %H:%M:%S")
+	to_ret = datetime.datetime.strptime(result_str, "%Y-%m-%d %H:%M:%S") + datetime.timedelta(hours=3)
 	return to_ret
 
 
@@ -308,7 +302,8 @@ def getStatus():
         else:
             data_sensors.append("Captured " + real_data[sensor]["value"] + " people")
         sensor_last_update_time = datetime.datetime.strptime(real_data[sensor]["time"], "%d-%m-%y %H:%M:%S")
-        # print("[DEBUG] sensor_last_update_time - curr_time: ", sensor_last_update_time - curr_time)
+        print("[DEBUG] sensor_last_update_time, curr_time: ", sensor_last_update_time,  curr_time)
+        print("[DEBUG] sensor_last_update_time  + active_delta: ", sensor_last_update_time  + active_delta)
         if (sensor_last_update_time + active_delta >= curr_time):
             if real_data[sensor]["value"] == "ERROR":
                 active_sensors[sensor] = 2
