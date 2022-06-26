@@ -1,37 +1,21 @@
-Realtime DB - Structure Example
+Realtime DB - Structure
 
-Assume we have 2 sensors - 000, 001
-And dat of 1 minute span with 30 seconds interval 
-between each received data.
+ Field name   |           type             |                  value                     |              explanation              |
 
-{ 
-  "real_data": { 
-     // format: dd-mm-yy hh:mm:ss <sensorId>
-     "S-01": {
-        "value": "0",
-	"time": "01-05-22 18:53:30",
-	"CallID": "0"
-     },
-     "V-01": {
-        "value": "21",
-	"time": "01-05-22 18:53:30",
-	"CallID": "1"
-     }
-  }
-  "data": { 
-     // format: dd-mm-yy hh:mm:ss <sensorId>
-     "01-05-22 18:53:30 S-01": {
-        "value": "0"
-     },
-     "01-05-22 18:53:30 V-01": {
-        "value": "21"
-     },
-     "01-05-22 18:53:00 S-02": {
-        "value": "1"
-     },
-     "01-05-22 18:53:30 S-03": {
-        "value": "19"
-     }
-  }
-}
-	
+   action     |          string            |                  on/off                    |        turn system on and off	        |
+
+   call_id    |       dict{str:int}        |           {sensor id: call_id}             |     track call id for each sensor     |
+
+    data      |    dict{str:{str:str}}}    |     {timestamp sensor:{value,call_id}}     |     all of the data of the day        |
+
+  real_data   |    dict{str:{str:str}}     |       {sensor_id:{value,time,call_id}}     |   only the last data of the sensor    |
+
+  reset1-5    |          string            |                  yes/no                    |   if changes to yes - restart esp 1-5 |
+
+  reset6-10   |          string            |                  yes/no                    |  if changes to yes - restart esp 6-10 |
+
+   resetmv    |          string            |                  yes/no                    |   if changes to yes - restart esp mv  |
+
+  scheduler   |    list[dict{str:str}]     |          [{start_time:end_time}]           |       holds user's schedulers         |
+
+   sensors    |    dict{str:{str:str}}     |  {sensor_id:{location,description,image}}  |    information about the sensors      |
