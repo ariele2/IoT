@@ -1,4 +1,4 @@
-Realtime DB - Structure
+# Realtime DB - Structure
 
  Field name   |           type             |                  value                     |              explanation              |
 
