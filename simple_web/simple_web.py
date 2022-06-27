@@ -224,7 +224,6 @@ def addScheduleAux(start_date, end_date):
 
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
 def home():
-    backupDayData(datetime.datetime(2022, 6, 23))
     form = InfoForm()
     scheduler_data = scheduler_ref.get()
     action_data = action_ref.get()

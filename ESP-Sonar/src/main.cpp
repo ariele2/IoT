@@ -13,7 +13,8 @@
 #include <map>
 
 
-#define WIFI_SSID "TechPublic"
+
+#define WIFI_SSID "TechPublic"  
 #define WIFI_PASSWORD ""
 
 // Insert Firebase project API Key
@@ -22,37 +23,45 @@
 // Insert RTDB URLefine the RTDB URL */
 #define DATABASE_URL "https://iotprojdb-default-rtdb.europe-west1.firebasedatabase.app/" 
 
-#define TRIG_PIN1 23 // ESP32 pin GIOP23 connected to Ultrasonic Sensor's TRIG pin
-#define ECHO_PIN1 22 // ESP32 pin GIOP22 connected to Ultrasonic Sensor's ECHO pin
-//connected to these
+
+/* TRIG and ECHO pins that each sonar needs to connect to, on the ESP borad */
+// S-1
+#define TRIG_PIN1 23
+#define ECHO_PIN1 22
+// S-2
 #define TRIG_PIN2 3
 #define ECHO_PIN2 2
-//conected to these
-#define TRIG_PIN3 18
+// S-3
+#define TRIG_PIN3 18 
 #define ECHO_PIN3 19
-//connected to these
+// S-4
 #define TRIG_PIN4 33 
 #define ECHO_PIN4 32 
-//connected to these
-#define TRIG_PIN5 26
-#define ECHO_PIN5 27
+// S-5
+#define TRIG_PIN5 26 
+#define ECHO_PIN5 27 
 
-// S1-5
-// #define SITTING_DISTANCE1 75
-// #define SITTING_DISTANCE2 75
-// #define SITTING_DISTANCE3 61
-// #define SITTING_DISTANCE4 85
-// #define SITTING_DISTANCE5 72
+
+/* The sitting distance configured for each sonar, after testing the sensitivity of it. 
+   When uploading code to an esp, uncomment the defines of the right esp, and comment
+   the other */
+// S1-5 
+#define SITTING_DISTANCE1 75
+#define SITTING_DISTANCE2 75
+#define SITTING_DISTANCE3 61
+#define SITTING_DISTANCE4 85
+#define SITTING_DISTANCE5 72
 // S6-10
-#define SITTING_DISTANCE1 47
-#define SITTING_DISTANCE2 50
-#define SITTING_DISTANCE3 65
-#define SITTING_DISTANCE4 50
-#define SITTING_DISTANCE5 50
+// #define SITTING_DISTANCE1 47
+// #define SITTING_DISTANCE2 50
+// #define SITTING_DISTANCE3 65
+// #define SITTING_DISTANCE4 50
+// #define SITTING_DISTANCE5 50
 
-#define PULL_SENSORS_DATA_TIME 10000
-#define FIREBASE_TIME_INTERVAL 2000 // time interval to send data for the firebase in ms
-#define WIFI_CHECK_INTERVAL 1000*60*5  // 5 minutes interval  
+
+#define PULL_SENSORS_DATA_TIME 10000  // time interval in which the esp receives data from the sonars to measure distance
+#define FIREBASE_TIME_INTERVAL 2000 // time interval to send data for the firebase in ms (if its less then PULL_SENSORS_DATA_TIME), it doesnt matter.
+#define WIFI_CHECK_INTERVAL 1000*60*5  // 5 minutes interval to check wifi connectivity 
 
 
 using namespace std;
@@ -64,6 +73,8 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
+/* serial debug should be false when uploading code to the esps to run, otherwise it will get stuck 
+   Turn it on to watch Serial prints */
 const bool serial_debug = false;
 
 void connect2Wifi() {
@@ -72,7 +83,7 @@ void connect2Wifi() {
     Serial.print("Connecting to Wi-Fi");
   }
   int not_connected_ctr = 0;
-  while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
+  while (WiFi.status() != WL_CONNECTED){ // wait for the connection to succeed, restart system after 2 minutes if cannot connect
     if (not_connected_ctr > 120) {
       ESP.restart();
     }
@@ -115,17 +126,18 @@ void connect2Firebase() {
   Firebase.reconnectWiFi(true);
 }
 
-
+// utility function 
 void removeCharsFromString(string &str, char* charsToRemove) {
    for ( unsigned int i = 0; i < strlen(charsToRemove); ++i ) {
       str.erase( remove(str.begin(), str.end(), charsToRemove[i]), str.end() );
    }
 }
 
+/* get sensor names according to the given input (1-5, 6-10, all). 
+   Should be usefull if there will be more sensors int the future */
 vector<string> getSensorsNames(string which) {
   vector<string> sensors_ids;
   bool sen_to_find;
-  int sens_count = 0;
   if (which.compare("all") == 0) {
     sen_to_find = true;
   }
@@ -147,7 +159,7 @@ vector<string> getSensorsNames(string which) {
       int sensor_pos = sensors_string.find_first_of(':');
       string sensor = sensors_string.substr(0,sensor_pos);
       removeCharsFromString(sensor, "{\"},");
-      int next_sensor_pos = sensors_string.find_first_of('}');
+      next_sensor_pos = sensors_string.find_first_of('}');
       sensors_string = sensors_string.substr(next_sensor_pos+1);
       if (sensor[0] != 'S' && which.compare("all") != 0) {
         continue;
@@ -172,6 +184,7 @@ vector<string> getSensorsNames(string which) {
   return sensors_ids;
 }
 
+/* holds each sensor data: 1.trig and echo pin, 2.counter if someone sits, 3.errornus data, 4.sitting distance */
 std::map<string, vector<int>> sensors_dist;
 
 void setup() {
@@ -194,21 +207,22 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
-  vector<string> sensors_ids = getSensorsNames("S6-10");
+  vector<string> sensors_ids = getSensorsNames("S1-5");
 
-  // {sensorID:{TRIG_PIN,ECHO_PIN,counter,total distance, sitting_distance}
+  // {sensorID:{TRIG_PIN,ECHO_PIN,counter, total measured distance, sitting_distance}
   vector<int> vec_s01 = {TRIG_PIN1, ECHO_PIN1, 0, 0, SITTING_DISTANCE1};
   vector<int> vec_s02 = {TRIG_PIN2, ECHO_PIN2, 0, 0, SITTING_DISTANCE2};
   vector<int> vec_s03 = {TRIG_PIN3, ECHO_PIN3, 0, 0, SITTING_DISTANCE3};
   vector<int> vec_s04 = {TRIG_PIN4, ECHO_PIN4, 0, 0, SITTING_DISTANCE4};
   vector<int> vec_s05 = {TRIG_PIN5, ECHO_PIN5, 0, 0, SITTING_DISTANCE5};
+  // initialize sensors_dist
   sensors_dist = {{sensors_ids[0], vec_s01}, {sensors_ids[1], vec_s02}, {sensors_ids[2], vec_s03}, 
                   {sensors_ids[3], vec_s04}, {sensors_ids[4], vec_s05}};
 }
 
-String serverPath = "http://just-the-time.appspot.com/";
-
+// get the current time from appspot, because the NTP servers are blocked within the technion's wifi 
 string genCurrTimeStr() {
+  String serverPath = "http://just-the-time.appspot.com/";
   HTTPClient http;
   http.begin(serverPath.c_str());
   int httpResponseCode = http.GET();
@@ -242,13 +256,14 @@ string genCurrTimeStr() {
 
 int tot_count = 0; // depends on the loops iteration we provide
 
+// utility function
 string int2str(int num) {
   ostringstream temp;
   temp << num;
   return temp.str();
 }
 
-// calculates counter for each sensor
+// calculates a counter for each sensor that gets +1 if within distance sitting else -1
 vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int tot_distance, int sitting_distance) {
   float distance;
   digitalWrite(trig_pin, LOW);
@@ -281,12 +296,13 @@ string isSitting(int counter, int tot_distance) {
   else {
     sitting = "NO";
   }
-  if (tot_count != 0 && tot_distance/tot_count < 4) { // it means that there is an error in the measurement (normal dist is between 15 to 100)
+  if (tot_count != 0 && tot_distance/tot_count < 4) { // it means that there is an error in the measurement (normal dist is in between 5 to 130)
     sitting = "ERROR";
   }
   return sitting;
 }
 
+// updates the database with the retreived data
 void updateDB(string sensorID, vector<int> sensor_data) {
   string curr_time = genCurrTimeStr();
   if (serial_debug) {
@@ -367,7 +383,7 @@ void checkWifiConnection() {
 }
 
 void checkReset() {
-  string reset_str = "reset6-10/"; // change to reset 6-10 for the second esp
+  string reset_str = "reset1-5/"; // change to reset 6-10 for the second esp
   if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, reset_str)) {
     string reset = fbdo.to<string>();
     if (reset.compare("yes") == 0) {
