@@ -1,7 +1,7 @@
 # Realtime DB - Structure
 
  Field name   |           type             |                  value                     |              explanation              |
-
+ --------------------------------------------------------------------------------------------------------------------------------
    action     |          string            |                  on/off                    |        turn system on and off	        |
 
    call_id    |       dict{str:int}        |           {sensor id: call_id}             |     track call id for each sensor     |
