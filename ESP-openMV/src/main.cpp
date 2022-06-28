@@ -46,7 +46,7 @@ void connect2Wifi() {
   }
   int not_connected_ctr = 0;
   while (WiFi.status() != WL_CONNECTED){ //wait for the connection to succeed
-    if (not_connected_ctr > 120) {
+    if (not_connected_ctr > 60) {
       ESP.restart();
     }
     if (serial_debug) {
@@ -79,6 +79,7 @@ void connect2Firebase() {
     if (serial_debug) {
       Serial.printf("%s\n", config.signer.signupError.message.c_str());
     }
+    ESP.restart();
   }
   /* Assign the callback function for the long running token generation task */
   config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
