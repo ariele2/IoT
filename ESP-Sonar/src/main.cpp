@@ -118,6 +118,7 @@ void connect2Firebase() {
     if (serial_debug) {
       Serial.printf("%s\n", config.signer.signupError.message.c_str());
     }
+    ESP.restart();
   }
 
   /* Assign the callback function for the long running token generation task */
