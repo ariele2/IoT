@@ -14,6 +14,7 @@ from time import ctime
 from urllib.request import urlopen
 
 
+# get the current time from appspot, because the NTP servers are blocked within the technion's wifi 
 def get_current_time():
 	res = urlopen('http://just-the-time.appspot.com/')
 	result = res.read().strip()
@@ -28,6 +29,7 @@ def get_current_time():
 	return to_ret
 
 
+# set the current time from appspot, because the NTP servers are blocked within the technion's wifi 
 def set_system_time():
     res = urlopen('http://just-the-time.appspot.com/')
     result = res.read().strip()
@@ -42,6 +44,7 @@ def set_system_time():
 
 
 ap = argparse.ArgumentParser()
+# the directory path in which the yolo configuration files are located
 ap.add_argument("-d", "--dir", required=True,
 	help="path to input image")
 ap.add_argument("-c", "--confidence", type=float, default=0.5,

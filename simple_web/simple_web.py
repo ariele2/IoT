@@ -35,12 +35,14 @@ bucket = storage.bucket()
 sensors_data = sensors_ref.get()
 sensors_ids = list(sensors_data.keys())
 
+# form for the data range in which we should generate a csv
 class InfoForm(FlaskForm):
     startdate = DateField('', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     enddate = DateField('-', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     submit = SubmitField('Generate CSV')
 
 
+# form for sensors editing in the Sensors's section
 class editSensorForm(FlaskForm):
     sensor = SelectField(u'Sensor ID', choices=sensors_ids, validate_choice=True)
     image = FileField(u'Image [jpg]')
@@ -49,12 +51,14 @@ class editSensorForm(FlaskForm):
     submit = SubmitField('Save')
 
 
+# form for the data range of the scheduler
 class SchedulerForm(FlaskForm):
     startdate = StringField('', validators=(validators.DataRequired(),))
     enddate = StringField('', validators=(validators.DataRequired(),))
     submit = SubmitField('Add')
 
 
+# get the current time from appspot, because the NTP servers are blocked within the technion's wifi 
 def getCurrentTime():
 	res = urlopen('http://just-the-time.appspot.com/')
 	result = res.read().strip()
@@ -63,6 +67,7 @@ def getCurrentTime():
 	return to_ret
 
 
+# generates a panda's data frame between 2 given dates 
 def generateDF(start_time, end_time, df, backup=False):
     data_ref = db.reference("/data")
     sensors_data = sensors_ref.get()
@@ -94,6 +99,7 @@ def generateDF(start_time, end_time, df, backup=False):
             data_ref.child(key).delete()
 
 
+# the background scheduler uses this function to backup each day's data in a csv and puts it in the storage database
 def backupDayData(day = None):   
     columns_titles = ["sensorID", "Type", "Location", "Event", "Time", "Day"]
     df = pd.DataFrame(columns=columns_titles)
@@ -120,6 +126,7 @@ def backupDayData(day = None):
     print("done")
 
 
+# turns the system on and off
 def updateDB():
     action_data = action_ref.get()
     if action_data == "off":
@@ -131,6 +138,9 @@ def updateDB():
     return "off"
 
 
+# generates the CSV file according to the given dates, using the backups from previous days, and if 
+# the end date is the current date, collects the information of this day. returns the url to download the 
+# genereated csv
 def generateCSVAux(start_date, end_date):
     # transfer date value to readable integers
     start_date = datetime.datetime.strptime(start_date[:16], "%a, %d %b %Y")
@@ -178,6 +188,8 @@ bg_sched = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
 bg_sched.add_job(backupDayData, trigger='cron', hour='0')
 bg_sched.start()
 
+
+# function used by the background scheduler to turn system on and off according to the scheduler times.
 def schedUpdate(action):
     print(f"Sched Update to: {action}")
     action_data = action_ref.get()
@@ -187,6 +199,8 @@ def schedUpdate(action):
         action_ref.set("off")
     return
 
+
+# add a schedule by the scheduler to the data base, from start_date to end_date
 def addScheduleAux(start_date, end_date):
     try:
         start_date_p = datetime.datetime.strptime(start_date, "%d-%m-%y %H:%M:%S")
@@ -222,6 +236,7 @@ def addScheduleAux(start_date, end_date):
         bg_sched.add_job(schedUpdate, run_date=end_date_p, args=["off"], trigger='date', id=end_date)
 
 
+# home route (main page)
 @app.route("/", methods=['GET','POST'])  # this sets the route to this page
 def home():
     form = InfoForm()
@@ -262,12 +277,14 @@ def home():
                            sched_time=sched_time)
 
 
+# a route to turn system on and off - redirects to the home page
 @app.route("/updateDB")
 def update_db():
     res = updateDB()
     return redirect(url_for("home"))
 
 
+# route to generate csv (post the range data), redirects to the database
 @app.route("/generateCSV")
 def generateCSV():
     startdate = session['startdate']
@@ -278,6 +295,7 @@ def generateCSV():
         return redirect(url_for("home", res=msg))
 
 
+# route to the status page
 @app.route("/status")
 def getStatus():
     # make a dict of all of the sensors (for now hard coded list) as keys, val initialized to 0
@@ -320,6 +338,7 @@ def getStatus():
     return render_template("status.html", active_sensors=active_sensors, data_sensors=data_sensors)
 
 
+# route to the sensors page
 @app.route("/sensors",  methods=['GET','POST'])
 def getSensors():
     # get the sensors data from the firebase
@@ -354,6 +373,7 @@ def getSensors():
                             sensor_image_prefixes=sensor_image_prefixes, form=form)
 
 
+# route to the scheduler page
 @app.route("/scheduler", methods=['GET','POST'])
 def scheduler():
     form = SchedulerForm()
@@ -385,6 +405,7 @@ def scheduler():
     return render_template("scheduler.html", scheduler_data=parsed_data, form=form, res=res)
 
 
+# route to delete (post) a schedule from the scheduler - redirects to the scheduler page
 @app.route("/deleteSchedule")
 def deleteSchedule():
     schedule_id = request.args.get('id')
@@ -399,6 +420,7 @@ def deleteSchedule():
     return redirect('scheduler')
 
 
+# route to add (post) a schedule to the scheduler - redirects to the scheduler page
 @app.route("/addSchedule")
 def addSchedule():
     startdate = session['startdate']
@@ -409,6 +431,7 @@ def addSchedule():
         return redirect(url_for("scheduler", res=res))
     return redirect(url_for("scheduler", res=''))
 
+# route to use restart button under the status page, redirects to status page
 @app.route("/restartSystem")
 def restartSystem():
     refs = [db.reference("/reset1-5"), db.reference("/reset6-10"), db.reference("resetmv")]
@@ -416,5 +439,7 @@ def restartSystem():
         ref.set("yes")
     return redirect(url_for("getStatus"))
 
+
+# creates the server on port 5000 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

@@ -37,6 +37,8 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
+/* serial debug should be false when uploading code to the esps to run, otherwise it will get stuck 
+   Turn it on to watch Serial prints */
 const bool serial_debug = false;
 
 void connect2Wifi() {
@@ -102,7 +104,7 @@ void setup() {
 
 
 String serverPath = "http://just-the-time.appspot.com/";
-
+// get the current time from appspot, because the NTP servers are blocked within the technion's wifi 
 string genCurrTimeStr() {
   HTTPClient http;
   http.begin(serverPath.c_str());
@@ -141,12 +143,14 @@ string int2str(int num) {
   return temp.str();
 }
 
+// utility function 
 void removeCharsFromString(string &str, char* charsToRemove) {
    for ( unsigned int i = 0; i < strlen(charsToRemove); ++i ) {
       str.erase( remove(str.begin(), str.end(), charsToRemove[i]), str.end() );
    }
 }
 
+// checks if the wifi is connected, if it cant connect for a minute - restart the esp
 void checkWifiConnection() {
   if (serial_debug) {
     Serial.println("checking wifi conection...");
@@ -175,6 +179,7 @@ void checkWifiConnection() {
   }
 }
 
+// for the reset button on the web - can restart the esp with a button press
 void checkReset() {
   string reset_str = "resetmv/"; 
   if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, reset_str)) { 
@@ -196,6 +201,7 @@ void checkReset() {
   }
 }
 
+// check if the system is on, if it is off - keep checking for 'on' state until changed.
 void checkAction() {
   unsigned long prevMillis = 0, wifiPrevMillis = 0;
   checkReset();
@@ -286,6 +292,7 @@ void updateDB(string value) {
   }
 }
 
+// makes the letters received from the openMV capital letters
 string fixReceivedData(string res) {
   if (res.find("out") != string::npos) {
       res = string("OUT");
