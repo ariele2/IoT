@@ -42,4 +42,5 @@
   
 # Related link:
 1. Google Drive : https://drive.google.com/drive/folders/1q5GBGWmjhADzvSeeB-UQ2ZBpg39OzViP
+2. RPI SD Backup: https://technionmail-my.sharepoint.com/personal/tom_sofer_technion_ac_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Ftom%5Fsofer%5Ftechnion%5Fac%5Fil%2FDocuments%2Fspring%202022%2Fsmart%20building%20yolo%2Eimg%2Exz&parent=%2Fpersonal%2Ftom%5Fsofer%5Ftechnion%5Fac%5Fil%2FDocuments%2Fspring%202022&ga=1
   
