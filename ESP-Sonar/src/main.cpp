@@ -46,17 +46,17 @@
    When uploading code to an esp, uncomment the defines of the right esp, and comment
    the other */
 // S1-5 
-#define SITTING_DISTANCE1 75
-#define SITTING_DISTANCE2 75
-#define SITTING_DISTANCE3 61
-#define SITTING_DISTANCE4 85
-#define SITTING_DISTANCE5 72
+// #define SITTING_DISTANCE1 75
+// #define SITTING_DISTANCE2 75
+// #define SITTING_DISTANCE3 61
+// #define SITTING_DISTANCE4 85
+// #define SITTING_DISTANCE5 72
 // S6-10
-// #define SITTING_DISTANCE1 47
-// #define SITTING_DISTANCE2 50
-// #define SITTING_DISTANCE3 65
-// #define SITTING_DISTANCE4 50
-// #define SITTING_DISTANCE5 50
+#define SITTING_DISTANCE1 47
+#define SITTING_DISTANCE2 50
+#define SITTING_DISTANCE3 65
+#define SITTING_DISTANCE4 50
+#define SITTING_DISTANCE5 48
 
 
 #define PULL_SENSORS_DATA_TIME 10000  // time interval in which the esp receives data from the sonars to measure distance
@@ -65,7 +65,6 @@
 
 
 using namespace std;
-
 
 
 //Define Firebase Data object
@@ -208,7 +207,7 @@ void setup() {
 
   // connect to firebase
   connect2Firebase();
-  vector<string> sensors_ids = getSensorsNames("S1-5");
+  vector<string> sensors_ids = getSensorsNames("S6-10");
 
   // {sensorID:{TRIG_PIN,ECHO_PIN,counter, total measured distance, sitting_distance}
   vector<int> vec_s01 = {TRIG_PIN1, ECHO_PIN1, 0, 0, SITTING_DISTANCE1};
@@ -264,7 +263,7 @@ string int2str(int num) {
   return temp.str();
 }
 
-// calculates a counter for each sensor that gets +1 if within distance sitting else -1
+// calculates a counter for each sensor that gets +1 if within sitting distance else -1
 vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int tot_distance, int sitting_distance) {
   float distance;
   digitalWrite(trig_pin, LOW);
@@ -289,6 +288,8 @@ vector<int> calcSitCounter(int trig_pin, int echo_pin, int sensor_counter, int t
   return res;
 }
 
+// receives the counter from calcSitCounter function and decides if there is someone sitting/not sitting 
+// or an Error with the sensor
 string isSitting(int counter, int tot_distance) {
   string sitting = "";
   if (counter >= 0) {
@@ -355,6 +356,7 @@ void updateDB(string sensorID, vector<int> sensor_data) {
   }
 }
 
+// checks if the wifi is connected, if it cant connect for a minute - restart the esp
 void checkWifiConnection() {
   if (serial_debug) {
     Serial.println("checking wifi conection...");
@@ -383,8 +385,9 @@ void checkWifiConnection() {
   }
 }
 
+// for the reset button on the web - can restart the esp with a button press
 void checkReset() {
-  string reset_str = "reset1-5/"; // change to reset 6-10 for the second esp
+  string reset_str = "reset6-10/"; // change to reset 6-10 for the second esp
   if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, reset_str)) {
     string reset = fbdo.to<string>();
     if (reset.compare("yes") == 0) {
@@ -404,6 +407,7 @@ void checkReset() {
   }
 }
 
+// check if the system is on, if it is off - keep checking for 'on' state until changed.
 void checkAction() {
   unsigned long prevMillis = 0, wifiPrevMillis = 0;
   checkReset();
