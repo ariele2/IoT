@@ -40,6 +40,6 @@
    
    d. Scheduler - the user can schedule a time range in which the system will turn on.
   
-# related link:
+# Related link:
 1. Google Drive : https://drive.google.com/drive/folders/1q5GBGWmjhADzvSeeB-UQ2ZBpg39OzViP
   
