@@ -15,6 +15,8 @@
    a. We developed a really easy and relaible algorithm to detect objects movement directions to determine if an object is moving in or out of the room/area.
    
    b. The camera is connected to an ESP32 board that uploads the data to a realtime-firebase database.
+
+   c. Install open-mv IDE to work with micropython and connect to the camera.
    
 2. Sonar sensors.
 
