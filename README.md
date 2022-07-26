@@ -16,7 +16,7 @@
    
    b. The camera is connected to an ESP32 board that uploads the data to a realtime-firebase database.
 
-   c. Install open-mv IDE to work with micropython and connect to the camera.
+   note: Install open-mv IDE to work with micropython and connect to the camera.
    
 2. Sonar sensors.
 
