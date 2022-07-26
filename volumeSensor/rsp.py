@@ -2,14 +2,12 @@ import firebase_admin
 from firebase_admin import db, credentials, initialize_app
 import numpy as np
 import argparse
-import time
 import cv2
 import os
 import threading
 import queue
 import time
 import datetime
-import ntplib
 from time import ctime
 from urllib.request import urlopen
 
