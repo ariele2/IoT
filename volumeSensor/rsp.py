@@ -44,7 +44,7 @@ def set_system_time():
 ap = argparse.ArgumentParser()
 # the directory path in which the yolo configuration files are located
 ap.add_argument("-d", "--dir", required=True,
-	help="path to input image")
+	help="path to volumeSensor dir")
 ap.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3,

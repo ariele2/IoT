@@ -14,3 +14,4 @@ pip install firebase_admin
 
 pip install urlib
 
+To run the code, use: python rsp.py --dir/-d <path_to_volumeSensor_dir> [-c confidence] [-t threshold]  
