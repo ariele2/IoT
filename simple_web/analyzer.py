@@ -1,4 +1,5 @@
 #%%
+from asyncio import events
 import pandas as pd
 import os
 import gspread
@@ -26,6 +27,16 @@ def analyze(report_path):
     df = pd.read_csv(report_path)
     time_col = df.loc[:, 'Time'].values
     day_col = df.loc[:, 'Day'].values
+    even = df.loc[:, 'Event'].values
+    number_of_people = []
+    for ev in even:
+        if ev == 'ERROR' or ev =="NO" or ev =="OUT":
+            number_of_people.append(0)
+        elif ev == "YES" or ev == "IN" :
+            number_of_people.append(1)
+        else:
+            number_of_people.append(ev)
+    df.insert(df.columns,"Occupied", number_of_people)
     df.drop('Day', inplace=True, axis=1)    # remove day column
     df.drop('Time', inplace=True, axis=1)   # remove time column
     new_day_col = []

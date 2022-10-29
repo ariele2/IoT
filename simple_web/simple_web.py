@@ -13,7 +13,7 @@ from io import StringIO
 import re
 import os
 from apscheduler.schedulers.background import BackgroundScheduler
-
+from analyzer import analyze
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = '#$%^&*'
@@ -116,12 +116,19 @@ def backupDayData(day = None):
     start_day_str = start_day.strftime("%d_%m_%y")
     new_csv_filename = backup_path + "backup_" + start_day_str + ".csv"
     df.to_csv(new_csv_filename, index=False)
+    new_analyze_csv = analyze(new_csv_filename)
     # upload the file to the storage
     blob = bucket.blob(new_csv_filename)
     with open(new_csv_filename, 'rb') as f:
         blob.upload_from_file(f)
     blob.make_public()
     os.remove(new_csv_filename)
+    blob = bucket.blob(new_analyze_csv)
+    with open(new_analyze_csv, 'rb') as f:
+        blob.upload_from_file(f)
+    blob.make_public()
+    os.remove(new_csv_filename)
+    os.remove(new_analyze_csv)
     print(blob.public_url)
     print("done")
 
