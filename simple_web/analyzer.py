@@ -19,7 +19,8 @@ def analyze(report_path):
         print(f'Cannot locate given path: "{report_path}"')
 
     analyze_name = f'analyze{report_path[report_path.rfind("report")+len("report"):]}'
-    analyzed_path =  already_analyzed(analyze_name)
+    analyzed_path = already_analyzed(analyze_name)
+    print(f'Analyzing {analyze_name}...')
     if analyzed_path:
         return analyzed_path
 
@@ -36,10 +37,12 @@ def analyze(report_path):
     df.insert(0, 'Date&Time', date_time_col)    # insert the date&time column to the table
 
     df.to_csv(os.path.join('csv_analyzes', analyze_name), index=False)  # create a csv inside the analyzes directory
+    print(f'Done')
     return os.path.join('csv_analyzes', analyze_name)
     
 
 def upload_sheet(analyze_csv_path):
+    print(f'Uploading...')
     df = pd.read_csv(analyze_csv_path)
     creds_file_path = 'C:\\Users\\ariel\\Desktop\\IoTIDEs\\IoTgit\\IoT\\simple_web\\sheets_creds.json'
     if not os.path.exists(creds_file_path):
@@ -66,7 +69,8 @@ def upload_sheet(analyze_csv_path):
     # sheet = d2g.upload(df, gfile=sheet_key, wks_name=wks_name, df_size=True, clean=True)
     print('Done!')
 
-def create_analyzed_sheet(report_path):
+def update_analyzed_sheet(report_path):
+    print(f'Starting analyzation...')
     analyze_csv_path = analyze(report_path)
     upload_sheet(analyze_csv_path)
 
@@ -76,4 +80,4 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parse analyzer args')
     parser.add_argument('-report', type=str, default='')
     args=parser.parse_args()
-    create_analyzed_sheet(args.report)
+    update_analyzed_sheet(args.report)

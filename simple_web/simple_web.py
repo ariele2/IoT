@@ -13,6 +13,8 @@ from io import StringIO
 import re
 import os
 from apscheduler.schedulers.background import BackgroundScheduler
+from analyzer import update_analyzed_sheet
+
 
 app = Flask(__name__)
 
@@ -56,6 +58,13 @@ class SchedulerForm(FlaskForm):
     startdate = StringField('', validators=(validators.DataRequired(),))
     enddate = StringField('', validators=(validators.DataRequired(),))
     submit = SubmitField('Add')
+    
+
+# form for the data range of the analyzer
+class AnalyzerForm(FlaskForm):
+    startdate = DateField('', format='%Y-%m-%d', validators=(validators.DataRequired(),))
+    enddate = DateField('-', format='%Y-%m-%d', validators=(validators.DataRequired(),))
+    submit = SubmitField('Start Analyze')
 
 
 # get the current time from appspot, because the NTP servers are blocked within the technion's wifi 
@@ -141,13 +150,18 @@ def updateDB():
 # generates the CSV file according to the given dates, using the backups from previous days, and if 
 # the end date is the current date, collects the information of this day. returns the url to download the 
 # genereated csv
-def generateCSVAux(start_date, end_date):
+def generateCSVAux(start_date, end_date, is_analyzer=False):
     # transfer date value to readable integers
     start_date = datetime.datetime.strptime(start_date[:16], "%a, %d %b %Y")
     end_date = datetime.datetime.strptime(end_date[:16], "%a, %d %b %Y")
     curr_date = getCurrentTime()
     print("GenerateCSVAux")
     print(f"curr_date: {curr_date}, start_date: {start_date}, end_date: {end_date}")
+    start_date_str = start_date.strftime("%d_%m_%y")
+    end_date_str = end_date.strftime("%d_%m_%y")
+    new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".csv"
+    if is_analyzer and os.path.exists(new_csv_filename):
+        return os.path.abspath(new_csv_filename)
     # validate the dates
     if start_date > end_date:
         return "Please enter a valid date range"
@@ -159,7 +173,7 @@ def generateCSVAux(start_date, end_date):
     for blob in blobs:
         if not blob.name.startswith(backup_path+'backup_') or not blob.name[19:27]:
             continue
-        print(f"blob.name: {blob.name} type: {type(blob.name)}")
+        # print(f"blob.name: {blob.name} type: {type(blob.name)}")
         blob_start_date = datetime.datetime.strptime(blob.name[19:27], "%d_%m_%y") 
         if blob_start_date >= start_date and blob_start_date <= end_date:
             inrange_blobs.append(blob.public_url)
@@ -171,17 +185,17 @@ def generateCSVAux(start_date, end_date):
     if curr_date-end_date <= datetime.timedelta(days=1):
         generateDF(end_date, end_date, df)
     # create the csv file
-    start_date_str = start_date.strftime("%d_%m_%y")
-    end_date_str = end_date.strftime("%d_%m_%y")
-    new_csv_filename = csv_path + "report_" + start_date_str + "-" + end_date_str + ".csv"
     df.to_csv(new_csv_filename, index=False)
     # upload the file to the storage
     blob = bucket.blob(new_csv_filename)
     with open(new_csv_filename, 'rb') as f:
         blob.upload_from_file(f)
     blob.make_public()
-    os.remove(new_csv_filename)
+    if not is_analyzer:
+        os.remove(new_csv_filename)
     # generate a download url and return it
+    if is_analyzer:
+        return os.path.abspath(new_csv_filename)
     return blob.public_url
 
 bg_sched = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
@@ -438,6 +452,33 @@ def restartSystem():
     for ref in refs:
         ref.set("yes")
     return redirect(url_for("getStatus"))
+
+
+@app.route("/analyzer", methods=['GET','POST'])  # this sets the route to this page
+def analyzer():
+    form = AnalyzerForm()
+
+    res = session['res'] if 'res' in session else ''
+    if res:
+        session.pop('res')
+
+    if form.validate_on_submit():
+        session['startdate'] = form.startdate.data
+        session['enddate'] = form.enddate.data
+        return redirect('analyze')
+
+    return render_template("analyzer.html", form=form, res=res)
+
+# route to analayze redirects to the database
+@app.route("/analyze")
+def analyze():
+    startdate = session['startdate']
+    enddate = session['enddate']
+    report_file = generateCSVAux(startdate, enddate, True)
+    update_analyzed_sheet(report_file)
+    if report_file and not report_file.startswith('report'):
+        session['res'] = msg
+        return redirect(url_for("analyzer", res=msg))
 
 
 # creates the server on port 5000 
