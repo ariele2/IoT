@@ -475,7 +475,8 @@ def analyze():
     startdate = session['startdate']
     enddate = session['enddate']
     res = generateCSVAux(startdate, enddate, True)
-    if res and res.startswith('report'):
+    print(f'res: {res}')
+    if res and 'report' in res:
         msg = 'https://datastudio.google.com/s/qIIRyNbafF0'
         update_analyzed_sheet(res)
     else:
