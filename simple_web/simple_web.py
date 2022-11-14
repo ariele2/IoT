@@ -478,7 +478,8 @@ def analyze():
     print(f'res: {res}')
     if res and 'report' in res:
         msg = 'https://datastudio.google.com/s/qIIRyNbafF0'
-        update_analyzed_sheet(res)
+        curr_date = datetime.datetime.now()
+        bg_sched.add_job(update_analyzed_sheet, args=[res])
     else:
         msg = res
     session['res'] = msg
