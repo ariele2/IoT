@@ -64,7 +64,7 @@ class SchedulerForm(FlaskForm):
 class AnalyzerForm(FlaskForm):
     startdate = DateField('', format='%Y-%m-%d', validators=(validators.DataRequired(),))
     enddate = DateField('-', format='%Y-%m-%d', validators=(validators.DataRequired(),))
-    submit = SubmitField('Start Analyze')
+    submit = SubmitField('Analyze')
 
 
 # get the current time from appspot, because the NTP servers are blocked within the technion's wifi 
@@ -193,9 +193,9 @@ def generateCSVAux(start_date, end_date, is_analyzer=False):
     blob.make_public()
     if not is_analyzer:
         os.remove(new_csv_filename)
-    # generate a download url and return it
-    if is_analyzer:
+    else:
         return os.path.abspath(new_csv_filename)
+    # generate a download url and return it
     return blob.public_url
 
 bg_sched = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
@@ -474,11 +474,14 @@ def analyzer():
 def analyze():
     startdate = session['startdate']
     enddate = session['enddate']
-    report_file = generateCSVAux(startdate, enddate, True)
-    update_analyzed_sheet(report_file)
-    if report_file and not report_file.startswith('report'):
-        session['res'] = msg
-        return redirect(url_for("analyzer", res=msg))
+    res = generateCSVAux(startdate, enddate, True)
+    if res and res.startswith('report'):
+        msg = 'https://datastudio.google.com/s/qIIRyNbafF0'
+        update_analyzed_sheet(res)
+    else:
+        msg = res
+    session['res'] = msg
+    return redirect(url_for("analyzer", res=msg))
 
 
 # creates the server on port 5000 

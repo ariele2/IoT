@@ -85,7 +85,7 @@ h1 {
     right: 1.5%;
 }
 
-.downloadBtn, .error {
+.downloadBtn, .error{
     text-align: center;
     position: relative;
     margin-top: -2%;
@@ -93,6 +93,12 @@ h1 {
 
 .downloadBtn {
     right: 3.5%;
+}
+
+.resultBtn {
+    text-align: center;
+    position: relative;
+    right: 30%;
 }
 
 .card-p {
