@@ -44,7 +44,7 @@ def analyze(report_path):
 def upload_sheet(analyze_csv_path):
     print(f'Uploading...')
     df = pd.read_csv(analyze_csv_path)
-    creds_file_path = 'C:\\Users\\ariel\\Desktop\\IoTIDEs\\IoTgit\\IoT\\simple_web\\sheets_creds.json'
+    creds_file_path = 'sheets_creds.json'
     if not os.path.exists(creds_file_path):
         print('Cannot locate credentials!')
     # scopes = [
