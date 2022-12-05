@@ -27,14 +27,37 @@ def analyze(report_path):
     df = pd.read_csv(report_path)
     time_col = df.loc[:, 'Time'].values
     day_col = df.loc[:, 'Day'].values
+    sensor_col = df.loc[:, 'sensorID'].values
+    event_col = df.loc[:, 'Event'].values
+
     df.drop('Day', inplace=True, axis=1)    # remove day column
     df.drop('Time', inplace=True, axis=1)   # remove time column
     new_day_col = []
-    for d in day_col:
+    new_people_inside_col = []
+    curr_day = day_col[0]
+    curr_time = time_col[0]
+    people_inside = 0
+    for i, d in enumerate(day_col):
         day = d.split('/')
         new_day_col.append(f'{day[1]}/{day[0]}/{day[2]}')   # create day in american format
+        
+        if curr_day != d:   # different day - zero the perople inside counter
+            people_inside = 0
+            curr_day = d
+
+        if sensor_col[i].startswith('D'):   
+            if event_col[i].lower() == 'in':
+                people_inside += 1
+            else:
+                people_inside -= 1
+                if people_inside < 0: 
+                    people_inside = 0
+
+        new_people_inside_col.append(people_inside)         
+
     date_time_col = [f'{d} {t}' for d,t in zip(new_day_col, time_col)]  # array of day&time 
     df.insert(0, 'Date&Time', date_time_col)    # insert the date&time column to the table
+    df.insert(0, 'PeopleInside', new_people_inside_col)
 
     df.to_csv(os.path.join('csv_analyzes', analyze_name), index=False)  # create a csv inside the analyzes directory
     print(f'Done')
@@ -81,3 +104,4 @@ if __name__ == '__main__':
     parser.add_argument('-report', type=str, default='')
     args=parser.parse_args()
     update_analyzed_sheet(args.report)
+    # update_analyzed_sheet('C:\\Users\\ariel\\Desktop\\IoTIDEs\\IoTgit\\IoT\\simple_web\\csv_reports\\report_03_07_22-14_07_22.csv')
